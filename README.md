@@ -231,4 +231,3 @@ users
 - **Cascade deletes** propagate automatically: deleting a workspace removes all its channels, members, and invitations; deleting a channel removes its messages and members.
 - **Lookup tables** (`roles`, `status`, `channeltype`) avoid hard-coded strings in business tables and make it easy to add new values without schema changes.
 - **Composite unique constraints** prevent duplicate invitations (`workspaceID, invitee`) and duplicate channel names within a workspace (`workspaceID, channel_name`).
-- **Timestamps** on all major entities support auditing, chronological ordering, and time-based queries (e.g., "invitations sent more than 5 days ago with no response").
