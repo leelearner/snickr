@@ -1,0 +1,234 @@
+# Snickr — Database Design
+
+Snickr is a Slack-like web collaboration system. Users can register, create workspaces, create channels within workspaces, and exchange messages. This repository documents the relational database design behind the system.
+
+---
+
+## ER Diagram
+
+![Snickr ER Diagram](ER-Diagram.drawio.svg)
+
+The diagram was created with [draw.io](https://app.diagrams.net) and captures all 12 tables along with their relationships and cardinalities.
+
+---
+
+## Relational Schema
+
+The database is divided into four functional modules: **User Management**, **Workspace Management**, **Channel Management**, and **Message Management**.
+
+### Module 1 — User Management
+
+#### `users`
+
+Core entity referenced by almost every other table.
+
+| Column | Type | Notes |
+|---|---|---|
+| `userID` | INTEGER PK (auto-increment) | System-generated unique identifier |
+| `email` | VARCHAR(50) | Globally unique, required |
+| `username` | VARCHAR(30) | Globally unique, required |
+| `nickname` | VARCHAR(30) | Optional display name |
+| `password` | VARCHAR(30) | |
+| `created_time` | TIMESTAMP | Defaults to current time |
+| `updated_time` | TIMESTAMP | Defaults to current time |
+
+Referenced by: `workspaces`, `workspacemember`, `workspaceinvitation`, `channels`, `channelmember`, `channelinvitation`, `messages`
+
+---
+
+### Module 2 — Workspace Management
+
+#### `workspaces`
+
+Top-level organizational unit, analogous to a Slack "team".
+
+| Column | Type | Notes |
+|---|---|---|
+| `workspaceID` | INTEGER PK (auto-increment) | |
+| `name` | VARCHAR(30) | Required |
+| `description` | VARCHAR(200) | Optional |
+| `created_time` | TIMESTAMP | |
+| `updated_time` | TIMESTAMP | |
+| `created_by` | INTEGER FK → `users.userID` | Creator becomes admin automatically; SET NULL on user delete |
+
+#### `roles`
+
+Lookup table for workspace member roles (e.g., `admin`, `member`).
+
+| Column | Type | Notes |
+|---|---|---|
+| `roleID` | INTEGER PK (auto-increment) | |
+| `name` | VARCHAR(20) | Globally unique |
+
+#### `workspacemember`
+
+Many-to-many join between `users` and `workspaces`.
+
+| Column | Type | Notes |
+|---|---|---|
+| `workspaceID` | INTEGER FK → `workspaces.workspaceID` | Part of composite PK; CASCADE on workspace delete |
+| `userID` | INTEGER FK → `users.userID` | Part of composite PK; CASCADE on user delete |
+| `role` | INTEGER FK → `roles.roleID` | Required |
+| `joined_time` | TIMESTAMP | |
+
+**PK:** `(workspaceID, userID)` — one record per user per workspace  
+**Index:** `idx_workspace_member_user (userID)` — accelerates "find all workspaces for a user"
+
+#### `status`
+
+Shared lookup table for invitation states (`pending`, `accepted`, `declined`), used by both workspace and channel invitations.
+
+| Column | Type | Notes |
+|---|---|---|
+| `statusID` | INTEGER PK (auto-increment) | |
+| `type` | VARCHAR(30) | Globally unique |
+
+#### `workspaceinvitation`
+
+Tracks admin-to-user invitations for workspaces.
+
+| Column | Type | Notes |
+|---|---|---|
+| `invitationID` | INTEGER PK (auto-increment) | |
+| `workspaceID` | INTEGER FK → `workspaces.workspaceID` | CASCADE on workspace delete |
+| `invitee` | INTEGER FK → `users.userID` | CASCADE on user delete |
+| `inviter` | INTEGER FK → `users.userID` | Should be a workspace admin |
+| `invited_time` | TIMESTAMP | |
+| `status_type` | INTEGER FK → `status.statusID` | |
+
+**Unique constraint:** `(workspaceID, invitee)` — one active invitation per user per workspace
+
+---
+
+### Module 3 — Channel Management
+
+#### `channeltype`
+
+Lookup table for channel access modes (`public`, `private`, `direct`).
+
+| Column | Type | Notes |
+|---|---|---|
+| `typeID` | INTEGER PK (auto-increment) | |
+| `name` | VARCHAR(30) | Globally unique |
+
+#### `channels`
+
+Containers for messages; belong to a workspace.
+
+| Column | Type | Notes |
+|---|---|---|
+| `channelID` | INTEGER PK (auto-increment) | |
+| `workspaceID` | INTEGER FK → `workspaces.workspaceID` | CASCADE on workspace delete |
+| `channel_name` | VARCHAR(50) | Unique within workspace |
+| `typeID` | INTEGER FK → `channeltype.typeID` | |
+| `created_by` | INTEGER FK → `users.userID` | |
+| `created_time` | TIMESTAMP | |
+| `updated_time` | TIMESTAMP | |
+
+**Unique constraint:** `(workspaceID, channel_name)`
+
+#### `channelmember`
+
+Many-to-many join between `users` and `channels`. Membership gates read/write access.
+
+| Column | Type | Notes |
+|---|---|---|
+| `channelID` | INTEGER FK → `channels.channelID` | Part of composite PK; CASCADE on channel delete |
+| `userID` | INTEGER FK → `users.userID` | Part of composite PK; CASCADE on user delete |
+| `joined_time` | TIMESTAMP | |
+
+**PK:** `(channelID, userID)`  
+**Index:** `idx_channel_member_user (userID)`
+
+#### `channelinvitation`
+
+Tracks creator-to-member invitations for private channels. Public channels can be joined directly; private channels require this flow.
+
+| Column | Type | Notes |
+|---|---|---|
+| `invitationID` | INTEGER PK (auto-increment) | |
+| `channelID` | INTEGER FK → `channels.channelID` | CASCADE on channel delete |
+| `invitee` | INTEGER FK → `users.userID` | CASCADE on user delete |
+| `inviter` | INTEGER FK → `users.userID` | Should be the channel creator |
+| `invited_time` | TIMESTAMP | |
+| `status_type` | INTEGER FK → `status.statusID` | |
+
+**Unique constraint:** `(channelID, invitee)`
+
+---
+
+### Module 4 — Message Management
+
+#### `messages`
+
+Core business data table. Supports full-text search via `LIKE` / `CONTAINS`.
+
+| Column | Type | Notes |
+|---|---|---|
+| `messageID` | INTEGER PK (auto-increment) | |
+| `channelID` | INTEGER FK → `channels.channelID` | CASCADE on channel delete |
+| `content` | VARCHAR(500) | Required |
+| `posted_time` | TIMESTAMP | Defaults to current time |
+| `posted_by` | INTEGER FK → `users.userID` | |
+
+**Index:** `idx_messages_channel (channelID)` — the most-used query path: fetch all messages in a channel
+
+---
+
+## Table Hierarchy
+
+```
+users
+ ├── workspaces (created_by)
+ │    ├── workspacemember    (userID, workspaceID, role → roles)
+ │    ├── workspaceinvitation (invitee, inviter, status_type → status)
+ │    └── channels           (created_by, workspaceID, typeID → channeltype)
+ │         ├── channelmember      (userID, channelID)
+ │         ├── channelinvitation  (invitee, inviter, status_type → status)
+ │         └── messages           (posted_by, channelID)
+```
+
+## Foreign Key Summary
+
+| Relationship | Delete Policy |
+|---|---|
+| `workspaces.created_by` → `users` | SET NULL |
+| `workspacemember` → `users` / `workspaces` | CASCADE |
+| `workspacemember.role` → `roles` | — |
+| `workspaceinvitation.invitee` → `users` | CASCADE |
+| `workspaceinvitation` → `workspaces` | CASCADE |
+| `workspaceinvitation.status_type` → `status` | — |
+| `channels` → `workspaces` | CASCADE |
+| `channels.typeID` → `channeltype` | — |
+| `channelmember` → `channels` / `users` | CASCADE |
+| `channelinvitation` → `channels` | CASCADE |
+| `channelinvitation.invitee` → `users` | CASCADE |
+| `channelinvitation.status_type` → `status` | — |
+| `messages` → `channels` | CASCADE |
+
+## Shared Lookup Tables
+
+| Table | Used By | Purpose |
+|---|---|---|
+| `roles` | `workspacemember.role` | Workspace role enum (admin / member) |
+| `status` | `workspaceinvitation.status_type`, `channelinvitation.status_type` | Invitation state enum (pending / accepted / declined) |
+| `channeltype` | `channels.typeID` | Channel access mode enum (public / private / direct) |
+
+---
+
+## Index Design
+
+| Index | Table | Column | Purpose |
+|---|---|---|---|
+| `idx_messages_channel` | `messages` | `channelID` | Timeline queries per channel |
+| `idx_workspace_member_user` | `workspacemember` | `userID` | Find all workspaces for a user |
+| `idx_channel_member_user` | `channelmember` | `userID` | Find all channels for a user |
+
+---
+
+## Design Notes
+
+- **Cascade deletes** propagate automatically: deleting a workspace removes all its channels, members, and invitations; deleting a channel removes its messages and members.
+- **Lookup tables** (`roles`, `status`, `channeltype`) avoid hard-coded strings in business tables and make it easy to add new values without schema changes.
+- **Composite unique constraints** prevent duplicate invitations (`workspaceID, invitee`) and duplicate channel names within a workspace (`workspaceID, channel_name`).
+- **Timestamps** on all major entities support auditing, chronological ordering, and time-based queries (e.g., "invitations sent more than 5 days ago with no response").
