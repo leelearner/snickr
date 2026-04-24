@@ -1,6 +1,22 @@
-# Snickr — Database Design
+# Snickr — Database Design (CS6083 Project, Part 1)
 
-Snickr is a Slack-like web collaboration system. Users can register, create workspaces, create channels within workspaces, and exchange messages. This repository documents the relational database design behind the system.
+Snickr is a Slack-like web collaboration system. Users register, create workspaces, create channels inside those workspaces, and exchange messages. This repository contains the schema design, SQL, and test data for Part 1 of the course project. The database is hosted on Supabase (PostgreSQL).
+
+## Repository contents
+
+| Path | Description |
+|---|---|
+| `ER-Diagram.drawio.svg` | ER diagram (draw.io) |
+| `README.md` | Schema documentation: tables, columns, constraints, FKs, indexes |
+| `snickr_schema_documentation.md` | Chinese version of the schema documentation |
+| `sql/schema.sql` | `CREATE TABLE` / index statements |
+| `sql/queries.sql` | Answers to part (c), parameterised with `:name` placeholders |
+| `sql/sample_data.sql` | Test data for part (d): 6 users, 2 workspaces, 5 channels, 4 invitations, 9 messages |
+| `sql/test_queries.sql` | Part (c) queries with concrete values substituted in |
+| `sql/test_data_diagram.md` | Diagram of the test dataset and design notes |
+| `sql/test_results.md` | Results of every test query as Markdown tables |
+
+To reproduce: run `sql/schema.sql`, then `sql/sample_data.sql`, then `sql/test_queries.sql` on any PostgreSQL instance.
 
 ---
 
