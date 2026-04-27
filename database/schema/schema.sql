@@ -17,7 +17,7 @@ CREATE TABLE workspaces (
     description VARCHAR(200),
     created_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    created_by INTEGER NOT NULL,
+    created_by INTEGER,
     FOREIGN KEY (created_by) REFERENCES users (userID) ON DELETE SET NULL
 );
 
