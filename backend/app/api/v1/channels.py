@@ -81,33 +81,16 @@ async def create_channel(
     user_id: int = Depends(current_user_id),
     conn: asyncpg.Connection = Depends(get_conn),
 ) -> ChannelSummary:
-    async with conn.transaction():
-        type_id = await conn.fetchval(
-            "SELECT typeID FROM channeltype WHERE name = $1", body.type,
+    # Stored procedure encapsulates the membership check + channel insert + creator-as-member insert.
+    try:
+        channel_id = await conn.fetchval(
+            "SELECT create_channel_for_member($1, $2, $3, $4)",
+            workspace_id, body.channelName, body.type, user_id,
         )
-        try:
-            channel_id = await conn.fetchval(
-                """
-                INSERT INTO channels (workspaceID, channel_name, typeID, created_by,
-                                      created_time, updated_time)
-                SELECT $1, $2, $3, $4, NOW(), NOW()
-                 WHERE EXISTS (
-                     SELECT 1 FROM workspacemember
-                      WHERE workspaceID = $1 AND userID = $4
-                 )
-                RETURNING channelID
-                """,
-                workspace_id, body.channelName, type_id, user_id,
-            )
-        except asyncpg.UniqueViolationError:
-            raise HTTPException(status.HTTP_409_CONFLICT, detail="channel name already exists in this workspace")
-        if channel_id is None:
-            raise HTTPException(status.HTTP_403_FORBIDDEN, detail="not a member of this workspace")
-
-        await conn.execute(
-            "INSERT INTO channelmember (channelID, userID, joined_time) VALUES ($1, $2, NOW())",
-            channel_id, user_id,
-        )
+    except asyncpg.UniqueViolationError:
+        raise HTTPException(status.HTTP_409_CONFLICT, detail="channel name already exists in this workspace")
+    if channel_id is None:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail="not a member of this workspace")
 
     return ChannelSummary(
         channelId=channel_id, channelName=body.channelName, type=body.type, isMember=True,

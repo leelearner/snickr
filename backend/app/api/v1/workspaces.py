@@ -346,10 +346,22 @@ async def respond_workspace_invitation(
     user_id: int = Depends(current_user_id),
     conn: asyncpg.Connection = Depends(get_conn),
 ) -> dict:
+    if body.accept:
+        # Stored procedure flips status -> accepted and inserts workspacemember atomically.
+        try:
+            workspace_id = await conn.fetchval(
+                "SELECT accept_workspace_invitation($1, $2)", invitation_id, user_id,
+            )
+        except asyncpg.RaiseError as e:
+            raise HTTPException(status.HTTP_409_CONFLICT, detail=str(e))
+        if workspace_id is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, detail="invitation not found")
+        return {"ok": True, "status": "accepted"}
+
     async with conn.transaction():
         inv = await conn.fetchrow(
             """
-            SELECT wi.workspaceID, s.type AS status
+            SELECT s.type AS status
               FROM workspaceinvitation wi
               JOIN status s ON s.statusID = wi.status_type
              WHERE wi.invitationID = $1
@@ -362,25 +374,12 @@ async def respond_workspace_invitation(
         if inv["status"] != "pending":
             raise HTTPException(status.HTTP_409_CONFLICT, detail=f"invitation already {inv['status']}")
 
-        new_status = "accepted" if body.accept else "declined"
         await conn.execute(
             """
             UPDATE workspaceinvitation
-               SET status_type = (SELECT statusID FROM status WHERE type = $1)
-             WHERE invitationID = $2
+               SET status_type = (SELECT statusID FROM status WHERE type = 'declined')
+             WHERE invitationID = $1
             """,
-            new_status, invitation_id,
+            invitation_id,
         )
-
-        if body.accept:
-            member_role_id = await conn.fetchval("SELECT roleID FROM roles WHERE name = 'member'")
-            await conn.execute(
-                """
-                INSERT INTO workspacemember (workspaceID, userID, role, joined_time)
-                VALUES ($1, $2, $3, NOW())
-                ON CONFLICT (workspaceID, userID) DO NOTHING
-                """,
-                inv["workspaceid"], user_id, member_role_id,
-            )
-
-    return {"ok": True, "status": new_status}
+    return {"ok": True, "status": "declined"}
