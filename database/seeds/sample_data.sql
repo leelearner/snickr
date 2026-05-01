@@ -10,14 +10,17 @@ INSERT INTO status (type)      VALUES ('pending'), ('accepted'), ('declined') ON
 INSERT INTO channeltype (name) VALUES ('public'),  ('private'),  ('direct')   ON CONFLICT (name) DO NOTHING;
 
 
--- Users (u6 frank has no workspaces — used for negative tests)
+-- Users (u6 frank has no workspaces — used for negative tests).
+-- Passwords are bcrypt-hashed. Plaintext for demo logins:
+--   alice / pw_alice    bob   / pw_bob    carol / pw_carol
+--   dave  / pw_dave     eve   / pw_eve    frank / pw_frank
 INSERT INTO users (email, username, nickname, password) VALUES
-  ('alice@acme.com',   'alice', 'Ali',     'pw_alice'),
-  ('bob@acme.com',     'bob',   'Bobby',   'pw_bob'),
-  ('carol@acme.com',   'carol', 'Caz',     'pw_carol'),
-  ('dave@acme.com',    'dave',  'D',       'pw_dave'),
-  ('eve@math.org',     'eve',   'Evie',    'pw_eve'),
-  ('frank@outside.io', 'frank', 'Frankie', 'pw_frank');
+  ('alice@acme.com',   'alice', 'Ali',     '$2b$12$piYq.sGX/AgiXotWRzaXZOw9Ti9gaM9z3Iv2DCcZBpml65pngQk72'),
+  ('bob@acme.com',     'bob',   'Bobby',   '$2b$12$aqE.HuaEvdscbUqmmNurd.90UvrZi0BtQ5RV3QXM4s4j7MXtQCbwO'),
+  ('carol@acme.com',   'carol', 'Caz',     '$2b$12$0JCLHa9.nVLHebWxnzuoKuMwDzI.mzbiUYs0f3BV2VCyuq2B3PiX.'),
+  ('dave@acme.com',    'dave',  'D',       '$2b$12$ORhY.kLEYwQNqoEivRKU6.Tjh4T3Og9bnFZnTwnjfy0TThHIv.qru'),
+  ('eve@math.org',     'eve',   'Evie',    '$2b$12$PXQLavKKqsSSSWrP6qFw1Op92MYQovNpBTuMf2P2fxSHC8MwU.PXS'),
+  ('frank@outside.io', 'frank', 'Frankie', '$2b$12$hXtUcVMfDi2UMTv4r9sE6uCT3Yhw8ewjDVgXGtBzJpLzU/fLKUl0O');
 
 
 -- Workspaces
