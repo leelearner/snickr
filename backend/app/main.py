@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 import asyncpg
 
+from app.api.v1 import auth as auth_router
 from app.core.config import settings
 from app.db.session import get_conn, lifespan
 
@@ -35,6 +36,9 @@ app.add_middleware(
     https_only=False,  # set True behind HTTPS in production
     max_age=60 * 60 * 24 * 7,  # 7 days
 )
+
+
+app.include_router(auth_router.router)
 
 
 @app.get("/api/health")

@@ -31,7 +31,68 @@ No auth. Returns `{ "ok": true, "db": "<timestamp>" }` if the backend can reach 
 
 ## Auth
 
-_(to be added)_
+### `POST /api/auth/register`
+
+Register a new user. On success the response body is the new user **and** the session cookie is set, so the client is logged in immediately.
+
+**Body**
+```json
+{ "email": "alice@acme.com", "username": "alice", "nickname": "Ali", "password": "..." }
+```
+- `nickname` is optional.
+- `email` and `username` must be globally unique.
+- Implements project query (c.1).
+
+**201 Created**
+```json
+{
+  "userId": 7,
+  "email": "alice@acme.com",
+  "username": "alice",
+  "nickname": "Ali",
+  "createdTime": "2026-04-30T12:34:56.000Z"
+}
+```
+
+**400** — validation failure (Pydantic response shape). **409** — email or username already in use.
+
+---
+
+### `POST /api/auth/login`
+
+**Body**
+```json
+{ "username": "alice", "password": "..." }
+```
+
+**200 OK** — same shape as `UserOut` (without `createdTime`). Sets the session cookie.
+
+**401** — invalid credentials. (Same message whether the username is wrong or the password is wrong, to avoid leaking user existence.)
+
+---
+
+### `POST /api/auth/logout`
+
+No body. Clears the session. Always returns `{ "ok": true }`.
+
+---
+
+### `GET /api/auth/me`
+
+Returns the currently logged-in user. **Frontend should call this on app load** to discover whether the user is logged in.
+
+**200 OK**
+```json
+{
+  "userId": 7,
+  "email": "alice@acme.com",
+  "username": "alice",
+  "nickname": "Ali",
+  "createdTime": "2026-04-30T12:34:56.000Z"
+}
+```
+
+**401** — not authenticated.
 
 ## Workspaces
 
