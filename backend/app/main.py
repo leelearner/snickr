@@ -4,6 +4,7 @@ from starlette.middleware.sessions import SessionMiddleware
 import asyncpg
 
 from app.api.v1 import auth as auth_router
+from app.api.v1 import workspaces as workspaces_router
 from app.core.config import settings
 from app.db.session import get_conn, lifespan
 
@@ -27,6 +28,8 @@ app.add_middleware(
 )
 
 app.include_router(auth_router.router)
+app.include_router(workspaces_router.router)
+app.include_router(workspaces_router.me_router)
 
 
 @app.get("/api/health")
