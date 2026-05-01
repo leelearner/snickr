@@ -5,6 +5,7 @@ import asyncpg
 
 from app.api.v1 import auth as auth_router
 from app.api.v1 import channels as channels_router
+from app.api.v1 import messages as messages_router
 from app.api.v1 import workspaces as workspaces_router
 from app.core.config import settings
 from app.db.session import get_conn, lifespan
@@ -34,6 +35,9 @@ app.include_router(workspaces_router.me_router)
 app.include_router(channels_router.workspace_channels_router)
 app.include_router(channels_router.channels_router)
 app.include_router(channels_router.me_router)
+app.include_router(messages_router.channel_msgs_router)
+app.include_router(messages_router.user_msgs_router)
+app.include_router(messages_router.search_router)
 
 
 @app.get("/api/health")
