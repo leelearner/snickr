@@ -39,16 +39,14 @@ FastAPI also generates an interactive API explorer at:
 | `app/db/session.py`     | `asyncpg` pool, lifespan hooks, `get_conn` dependency |
 | `app/api/v1/`           | One router per resource: `auth.py`, `workspaces.py`, `channels.py`, `messages.py`, `search.py` |
 | `app/schemas/`          | Pydantic request/response models |
-| `tests/`                | (TBD) integration tests against a Supabase test DB |
 | `.env.example`          | Template; copy to `.env` (gitignored) |
 
-The API contract lives at <http://localhost:8000/docs> while the server is running — FastAPI generates it from the Pydantic models and route signatures, so it never drifts from the code.
+API contract: <http://localhost:8000/docs> (auto-generated from Pydantic models).
 
 ## Design notes
 
-- **SQL injection defense.** Every query is parameterized with asyncpg's `$1, $2, ...` placeholders. asyncpg uses Postgres's native PREPARE protocol — the SQL text and parameter values travel separately, so user input cannot be interpreted as SQL.
-- **XSS defense.** Out of scope for the JSON API; the React frontend escapes output by default. Backend stores raw text.
-- **Sessions.** Starlette's `SessionMiddleware` sets a signed (itsdangerous) cookie containing `{ user_id: ... }`. The cookie is `httpOnly` + `sameSite=lax`. No server-side session table needed for the basic flow.
-- **camelCase.** Postgres lowercases identifiers, so SQL aliases each column at query time: `SELECT workspaceID AS "workspaceId"`. Pydantic models use the same names so the JSON shape matches.
-- **Transactions.** Multi-statement operations use `async with conn.transaction():` — the asyncpg equivalent of `BEGIN`/`COMMIT`/`ROLLBACK`.
-- **Auto API docs.** FastAPI generates `/docs` (Swagger UI) and `/redoc` from the type hints — the single source of truth for the frontend contract.
+- **SQL injection.** Parameterized queries via asyncpg `$1, $2, ...` (Postgres PREPARE protocol).
+- **XSS.** Frontend's job; backend stores raw text.
+- **Sessions.** Signed cookie via Starlette's `SessionMiddleware` (`httpOnly`, `sameSite=lax`).
+- **camelCase.** SQL aliases each column at query time: `SELECT workspaceID AS "workspaceId"`.
+- **Transactions.** Multi-statement operations use `async with conn.transaction():`.
