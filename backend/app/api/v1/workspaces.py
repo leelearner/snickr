@@ -7,6 +7,7 @@ from app.schemas.workspace import (
     AdminEntry,
     InviteCreate,
     InviteResponse,
+    RoleChange,
     StaleChannelInvite,
     WorkspaceCreate,
     WorkspaceDetail,
@@ -222,6 +223,95 @@ async def stale_channel_invites(
         workspace_id,
     )
     return [StaleChannelInvite(**dict(r)) for r in rows]
+
+
+async def _admin_count(conn: asyncpg.Connection, workspace_id: int) -> int:
+    return int(await conn.fetchval(
+        """
+        SELECT COUNT(*)
+          FROM workspacemember wm
+          JOIN roles r ON r.roleID = wm.role
+         WHERE wm.workspaceID = $1 AND r.name = 'admin'
+        """,
+        workspace_id,
+    ))
+
+
+@router.delete("/{workspace_id}/members/{target_user_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def remove_member(
+    workspace_id: int,
+    target_user_id: int,
+    user_id: int = Depends(current_user_id),
+    conn: asyncpg.Connection = Depends(get_conn),
+) -> None:
+    await _require_admin(conn, user_id, workspace_id)
+
+    target = await conn.fetchrow(
+        """
+        SELECT r.name AS role
+          FROM workspacemember wm
+          JOIN roles r ON r.roleID = wm.role
+         WHERE wm.workspaceID = $1 AND wm.userID = $2
+        """,
+        workspace_id, target_user_id,
+    )
+    if target is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="user is not a member of this workspace")
+
+    if target["role"] == "admin" and await _admin_count(conn, workspace_id) == 1:
+        raise HTTPException(status.HTTP_409_CONFLICT, detail="cannot remove the last admin")
+
+    async with conn.transaction():
+        await conn.execute(
+            """
+            DELETE FROM channelmember
+             WHERE userID = $1
+               AND channelID IN (SELECT channelID FROM channels WHERE workspaceID = $2)
+            """,
+            target_user_id, workspace_id,
+        )
+        await conn.execute(
+            "DELETE FROM workspacemember WHERE workspaceID = $1 AND userID = $2",
+            workspace_id, target_user_id,
+        )
+
+
+@router.patch("/{workspace_id}/members/{target_user_id}/role")
+async def change_member_role(
+    workspace_id: int,
+    target_user_id: int,
+    body: RoleChange,
+    user_id: int = Depends(current_user_id),
+    conn: asyncpg.Connection = Depends(get_conn),
+) -> dict:
+    await _require_admin(conn, user_id, workspace_id)
+
+    current = await conn.fetchval(
+        """
+        SELECT r.name
+          FROM workspacemember wm
+          JOIN roles r ON r.roleID = wm.role
+         WHERE wm.workspaceID = $1 AND wm.userID = $2
+        """,
+        workspace_id, target_user_id,
+    )
+    if current is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="user is not a member of this workspace")
+    if current == body.role:
+        return {"ok": True, "role": body.role}
+
+    if current == "admin" and body.role == "member" and await _admin_count(conn, workspace_id) == 1:
+        raise HTTPException(status.HTTP_409_CONFLICT, detail="cannot demote the last admin")
+
+    await conn.execute(
+        """
+        UPDATE workspacemember
+           SET role = (SELECT roleID FROM roles WHERE name = $1)
+         WHERE workspaceID = $2 AND userID = $3
+        """,
+        body.role, workspace_id, target_user_id,
+    )
+    return {"ok": True, "role": body.role}
 
 
 @me_router.get("/workspace-invitations", response_model=list[WorkspaceInvitation])

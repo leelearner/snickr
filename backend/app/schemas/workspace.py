@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -47,6 +48,10 @@ class WorkspaceInvitation(BaseModel):
 
 class InviteResponse(BaseModel):
     accept: bool
+
+
+class RoleChange(BaseModel):
+    role: Literal["admin", "member"]
 
 
 class StaleChannelInvite(BaseModel):
