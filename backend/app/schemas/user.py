@@ -1,9 +1,3 @@
-"""Pydantic models for user-facing payloads.
-
-Field names match the JSON contract (camelCase). The schema column names
-in Postgres are lowercase (see SQL aliases in the route handlers).
-"""
-
 from datetime import datetime
 
 from pydantic import BaseModel, EmailStr, Field
@@ -22,8 +16,6 @@ class UserLogin(BaseModel):
 
 
 class UserOut(BaseModel):
-    """User shape returned to the frontend. Never includes the password hash."""
-
     userId: int
     email: EmailStr
     username: str

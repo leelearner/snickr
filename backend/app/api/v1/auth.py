@@ -1,5 +1,3 @@
-"""Authentication endpoints: register, login, logout, me."""
-
 import asyncpg
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 
@@ -11,29 +9,12 @@ from app.schemas.user import UserLogin, UserOut, UserRegister
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
-# Reused in /register and /me. Aliases each lowercased Postgres column
-# back to the camelCase shape the frontend expects.
-_USER_SELECT = """
-    SELECT userID       AS "userId",
-           email,
-           username,
-           nickname,
-           created_time AS "createdTime"
-      FROM users
-"""
-
-
 @router.post("/register", status_code=status.HTTP_201_CREATED, response_model=UserOut)
 async def register(
     body: UserRegister,
     request: Request,
     conn: asyncpg.Connection = Depends(get_conn),
 ) -> UserOut:
-    """Implements query (c.1) — register a new user — with bcrypt-hashed password.
-
-    On success the new user's id is stored in the session, so the client is
-    logged in immediately and does not need a follow-up POST /login.
-    """
     pw_hash = hash_password(body.password)
     try:
         row = await conn.fetchrow(
@@ -50,10 +31,7 @@ async def register(
             body.email, body.username, body.nickname, pw_hash,
         )
     except asyncpg.UniqueViolationError:
-        raise HTTPException(
-            status.HTTP_409_CONFLICT,
-            detail="email or username already in use",
-        )
+        raise HTTPException(status.HTTP_409_CONFLICT, detail="email or username already in use")
 
     request.session["user_id"] = row["userId"]
     return UserOut(**dict(row))
@@ -77,8 +55,8 @@ async def login(
         """,
         body.username,
     )
+    # Same error message for unknown-user and bad-password to avoid leaking which usernames exist.
     if row is None or not verify_password(body.password, row["passwordHash"]):
-        # Same message for both branches so attackers can't probe usernames.
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="invalid credentials")
 
     request.session["user_id"] = row["userId"]
@@ -101,8 +79,18 @@ async def me(
     user_id: int = Depends(current_user_id),
     conn: asyncpg.Connection = Depends(get_conn),
 ) -> UserOut:
-    row = await conn.fetchrow(_USER_SELECT + " WHERE userID = $1", user_id)
+    row = await conn.fetchrow(
+        """
+        SELECT userID       AS "userId",
+               email,
+               username,
+               nickname,
+               created_time AS "createdTime"
+          FROM users
+         WHERE userID = $1
+        """,
+        user_id,
+    )
     if row is None:
-        # Session refers to a deleted user — clear it.
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="not authenticated")
     return UserOut(**dict(row))
