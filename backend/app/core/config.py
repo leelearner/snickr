@@ -1,0 +1,14 @@
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    """Loaded from backend/.env. See .env.example for the keys."""
+
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+
+    DATABASE_URL: str
+    SESSION_SECRET: str
+    FRONTEND_ORIGIN: str = "http://localhost:5173"
+
+
+settings = Settings()

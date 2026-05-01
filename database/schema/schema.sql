@@ -6,7 +6,7 @@ CREATE TABLE users (
     email VARCHAR(50) UNIQUE NOT NULL,
     username VARCHAR(30) UNIQUE NOT NULL,
     nickname VARCHAR(30),
-    password VARCHAR(30),
+    password VARCHAR(255),  -- bcrypt hashes are 60 chars; widened from 30 for hashed storage
     created_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
