@@ -17,6 +17,13 @@ class ChannelSummary(BaseModel):
     channelName: str
     type: ChannelType
     isMember: bool
+    directUserId: int | None = None
+    directUsername: str | None = None
+    directNickname: str | None = None
+
+
+class DirectMessageCreate(BaseModel):
+    targetUserId: int
 
 
 class ChannelMember(BaseModel):

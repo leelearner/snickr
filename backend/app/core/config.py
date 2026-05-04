@@ -8,5 +8,9 @@ class Settings(BaseSettings):
     SESSION_SECRET: str
     FRONTEND_ORIGIN: str = "http://localhost:5173"
 
+    @property
+    def frontend_origins(self) -> list[str]:
+        return [origin.strip() for origin in self.FRONTEND_ORIGIN.split(",") if origin.strip()]
+
 
 settings = Settings()

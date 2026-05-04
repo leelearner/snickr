@@ -63,7 +63,7 @@ async def post_channel_message(
         """
         WITH inserted AS (
             INSERT INTO messages (channelID, content, posted_time, posted_by)
-            VALUES ($1, $2, NOW(), $3)
+            VALUES ($1, $2, timezone('America/New_York', NOW()), $3)
             RETURNING messageID, content, posted_time, posted_by
         )
         SELECT i.messageID    AS "messageId",

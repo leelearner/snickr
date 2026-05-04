@@ -25,7 +25,7 @@ async def test_create_channel_via_sp_succeeds_for_member(make_client, uid):
     ws_id = (await alice.post("/api/workspaces", json={"name": f"ws_{uid}"})).json()["workspaceId"]
 
     r = await alice.post(f"/api/workspaces/{ws_id}/channels",
-                         json={"channelName": "general", "type": "public"})
+                         json={"channelName": "project", "type": "public"})
     assert r.status_code == 201
     assert r.json()["isMember"] is True
 
@@ -56,7 +56,7 @@ async def test_private_channel_hidden_from_non_member(make_client, uid):
     alice, bob, _, _, ws_id = await _setup_workspace_with_member(make_client, uid)
 
     pub_id = (await alice.post(f"/api/workspaces/{ws_id}/channels",
-                               json={"channelName": "general", "type": "public"})).json()["channelId"]
+                               json={"channelName": "public-room", "type": "public"})).json()["channelId"]
     priv_id = (await alice.post(f"/api/workspaces/{ws_id}/channels",
                                 json={"channelName": "exec", "type": "private"})).json()["channelId"]
 
@@ -73,7 +73,7 @@ async def test_private_channel_hidden_from_non_member(make_client, uid):
 async def test_join_public_channel(make_client, uid):
     alice, bob, _, b, ws_id = await _setup_workspace_with_member(make_client, uid)
     pub_id = (await alice.post(f"/api/workspaces/{ws_id}/channels",
-                               json={"channelName": "general", "type": "public"})).json()["channelId"]
+                               json={"channelName": "public-room", "type": "public"})).json()["channelId"]
 
     r = await bob.post(f"/api/channels/{pub_id}/join")
     assert r.status_code == 200

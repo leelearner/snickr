@@ -115,7 +115,7 @@ async def test_remove_member_kicks_from_channels_too(make_client, uid):
     await bob.post(f"/api/me/workspace-invitations/{inv_id}", json={"accept": True})
 
     ch_id = (await alice.post(f"/api/workspaces/{ws_id}/channels",
-                              json={"channelName": "general", "type": "public"})).json()["channelId"]
+                              json={"channelName": "ops", "type": "public"})).json()["channelId"]
     await bob.post(f"/api/channels/{ch_id}/join")
 
     # confirm bob is in the channel

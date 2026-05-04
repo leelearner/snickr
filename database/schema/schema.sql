@@ -102,7 +102,7 @@ CREATE TABLE messages (
     messageID INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     channelID INTEGER NOT NULL,
     content VARCHAR(500) NOT NULL,
-    posted_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    posted_time TIMESTAMP DEFAULT timezone('America/New_York', NOW()) NOT NULL,
     posted_by INTEGER NOT NULL,
     FOREIGN KEY (channelID) REFERENCES channels (channelID) ON DELETE CASCADE,
     FOREIGN KEY (posted_by) REFERENCES users (userID)

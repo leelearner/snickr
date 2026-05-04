@@ -6,7 +6,7 @@ pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 
 async def _two_member_channel(make_client, uid):
-    """Returns (alice, bob, alice_user, bob_user, ws_id, channel_id) — both in #general."""
+    """Returns (alice, bob, alice_user, bob_user, ws_id, channel_id)."""
     alice = await make_client()
     bob = await make_client()
     a = await register(alice, uid + "a")
@@ -16,7 +16,7 @@ async def _two_member_channel(make_client, uid):
     inv_id = (await bob.get("/api/me/workspace-invitations")).json()[0]["invitationId"]
     await bob.post(f"/api/me/workspace-invitations/{inv_id}", json={"accept": True})
     ch_id = (await alice.post(f"/api/workspaces/{ws_id}/channels",
-                              json={"channelName": "general", "type": "public"})).json()["channelId"]
+                              json={"channelName": "project", "type": "public"})).json()["channelId"]
     await bob.post(f"/api/channels/{ch_id}/join")
     return alice, bob, a, b, ws_id, ch_id
 
@@ -38,7 +38,7 @@ async def test_non_member_cannot_post_or_read(make_client, uid):
     await register(bob, uid + "b")  # not in workspace
     ws_id = (await alice.post("/api/workspaces", json={"name": f"ws_{uid}"})).json()["workspaceId"]
     ch_id = (await alice.post(f"/api/workspaces/{ws_id}/channels",
-                              json={"channelName": "general", "type": "public"})).json()["channelId"]
+                              json={"channelName": "project", "type": "public"})).json()["channelId"]
 
     # bob can't post
     r = await bob.post(f"/api/channels/{ch_id}/messages", json={"content": "sneak"})
@@ -74,7 +74,7 @@ async def test_search_respects_membership(make_client, uid):
     await bob.post(f"/api/me/workspace-invitations/{inv_id}", json={"accept": True})
 
     pub_id = (await alice.post(f"/api/workspaces/{ws_id}/channels",
-                               json={"channelName": "general", "type": "public"})).json()["channelId"]
+                               json={"channelName": "project", "type": "public"})).json()["channelId"]
     priv_id = (await alice.post(f"/api/workspaces/{ws_id}/channels",
                                 json={"channelName": "exec", "type": "private"})).json()["channelId"]
 
@@ -90,5 +90,5 @@ async def test_search_respects_membership(make_client, uid):
     bob_hits = (await bob.get(f"/api/search?q={needle}")).json()
 
     assert {m["content"] for m in alice_hits} == {f"{needle} in public", f"{needle} in private"}
-    # bob is only in #general; he must not see the private message even though it matches.
+    # bob is only in the public project channel; he must not see the private message even though it matches.
     assert {m["content"] for m in bob_hits} == {f"{needle} in public"}

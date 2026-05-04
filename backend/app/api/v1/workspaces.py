@@ -83,6 +83,12 @@ async def create_workspace(
             """,
             ws_id, user_id, admin_role_id,
         )
+        general_channel_id = await conn.fetchval(
+            "SELECT create_channel_for_member($1, $2, $3, $4)",
+            ws_id, "general", "public", user_id,
+        )
+        if general_channel_id is None:
+            raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="failed to create default channel")
     return WorkspaceSummary(
         workspaceId=ws_id, name=body.name, description=body.description, myRole="admin",
     )
@@ -90,7 +96,7 @@ async def create_workspace(
 
 @router.get("/admins", response_model=list[AdminEntry])
 async def list_all_admins(
-    _: int = Depends(current_user_id),
+    user_id: int = Depends(current_user_id),
     conn: asyncpg.Connection = Depends(get_conn),
 ) -> list[AdminEntry]:
     rows = await conn.fetch(
@@ -104,9 +110,12 @@ async def list_all_admins(
           JOIN workspacemember wm ON wm.workspaceID = w.workspaceID
           JOIN roles           r  ON r.roleID       = wm.role
           JOIN users           u  ON u.userID       = wm.userID
+          JOIN workspacemember me ON me.workspaceID = w.workspaceID
          WHERE r.name = 'admin'
+           AND me.userID = $1
          ORDER BY w.workspaceID, u.username
         """,
+        user_id,
     )
     return [AdminEntry(**dict(r)) for r in rows]
 
@@ -218,6 +227,7 @@ async def stale_channel_invites(
          WHERE c.workspaceID = $1
            AND ct.name       = 'public'
          GROUP BY c.channelID, c.channel_name
+        HAVING COUNT(ci.invitationID) > 0
          ORDER BY c.channel_name
         """,
         workspace_id,

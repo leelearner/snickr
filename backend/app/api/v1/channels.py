@@ -10,6 +10,7 @@ from app.schemas.channel import (
     ChannelInvitation,
     ChannelMember,
     ChannelSummary,
+    DirectMessageCreate,
     InviteResponse,
 )
 
@@ -51,12 +52,24 @@ async def list_channels(
                    SELECT 1 FROM channelmember cm
                     WHERE cm.channelID = c.channelID
                       AND cm.userID    = $2
-               ) AS "isMember"
+               ) AS "isMember",
+               du.userID      AS "directUserId",
+               du.username    AS "directUsername",
+               du.nickname    AS "directNickname"
           FROM channels    c
           JOIN channeltype ct ON ct.typeID = c.typeID
+          LEFT JOIN LATERAL (
+              SELECT u.userID, u.username, u.nickname
+                FROM channelmember cm
+                JOIN users u ON u.userID = cm.userID
+               WHERE cm.channelID = c.channelID
+                 AND cm.userID <> $2
+               ORDER BY u.username
+               LIMIT 1
+          ) du ON ct.name = 'direct'
          WHERE c.workspaceID = $1
            AND (
-               ct.name <> 'private'
+               ct.name = 'public'
                OR EXISTS (
                    SELECT 1 FROM channelmember cm
                     WHERE cm.channelID = c.channelID
@@ -81,6 +94,9 @@ async def create_channel(
     user_id: int = Depends(current_user_id),
     conn: asyncpg.Connection = Depends(get_conn),
 ) -> ChannelSummary:
+    if body.type == "direct":
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="use the direct message endpoint to create DMs")
+
     # Stored procedure encapsulates the membership check + channel insert + creator-as-member insert.
     try:
         channel_id = await conn.fetchval(
@@ -94,6 +110,77 @@ async def create_channel(
 
     return ChannelSummary(
         channelId=channel_id, channelName=body.channelName, type=body.type, isMember=True,
+    )
+
+
+@workspace_channels_router.post(
+    "/{workspace_id}/direct-messages",
+    status_code=status.HTTP_201_CREATED,
+    response_model=ChannelSummary,
+)
+async def create_or_get_direct_message(
+    workspace_id: int,
+    body: DirectMessageCreate,
+    user_id: int = Depends(current_user_id),
+    conn: asyncpg.Connection = Depends(get_conn),
+) -> ChannelSummary:
+    if body.targetUserId == user_id:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="cannot create a direct message with yourself")
+
+    target = await conn.fetchrow(
+        """
+        SELECT u.userID AS "userId", u.username, u.nickname
+          FROM users u
+         WHERE u.userID = $1
+        """,
+        body.targetUserId,
+    )
+    if target is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="user not found")
+
+    both_members = await conn.fetchval(
+        """
+        SELECT COUNT(*) = 2
+          FROM workspacemember
+         WHERE workspaceID = $1
+           AND userID = ANY($2::int[])
+        """,
+        workspace_id, [user_id, body.targetUserId],
+    )
+    if not both_members:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail="both users must be workspace members")
+
+    first_id, second_id = sorted([user_id, body.targetUserId])
+    channel_name = f"dm-{first_id}-{second_id}"
+
+    async with conn.transaction():
+        channel_id = await conn.fetchval(
+            """
+            INSERT INTO channels (workspaceID, channel_name, typeID, created_by, created_time, updated_time)
+            VALUES ($1, $2, (SELECT typeID FROM channeltype WHERE name = 'direct'), $3, NOW(), NOW())
+            ON CONFLICT (workspaceID, channel_name)
+            DO UPDATE SET updated_time = channels.updated_time
+            RETURNING channelID
+            """,
+            workspace_id, channel_name, user_id,
+        )
+        await conn.executemany(
+            """
+            INSERT INTO channelmember (channelID, userID, joined_time)
+            VALUES ($1, $2, NOW())
+            ON CONFLICT (channelID, userID) DO NOTHING
+            """,
+            [(channel_id, user_id), (channel_id, body.targetUserId)],
+        )
+
+    return ChannelSummary(
+        channelId=channel_id,
+        channelName=channel_name,
+        type="direct",
+        isMember=True,
+        directUserId=target["userId"],
+        directUsername=target["username"],
+        directNickname=target["nickname"],
     )
 
 
@@ -124,7 +211,7 @@ async def get_channel(
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="channel not found")
 
     is_member = await _is_channel_member(conn, user_id, channel_id)
-    if ch["type"] == "private" and not is_member:
+    if ch["type"] in {"private", "direct"} and not is_member:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="channel not found")
 
     members = await conn.fetch(
