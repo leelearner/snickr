@@ -1,15 +1,20 @@
-import { useEffect, useRef } from "react";
-import type { MessageOut, UserOut } from "../../types/api";
+import { Fragment, useEffect, useRef } from "react";
+import type { MessageOut } from "../../types/api";
+import { dateKey, formatDateDivider } from "../../utils/format";
 import { EmptyState } from "../common/EmptyState";
 import { MessageItem } from "./MessageItem";
 
-export function MessageList({
-  messages,
-  currentUser,
-}: {
-  messages: MessageOut[];
-  currentUser: UserOut | null;
-}) {
+const FIVE_MINUTES_MS = 5 * 60 * 1000;
+
+function shouldGroupWithPrevious(prev: MessageOut, current: MessageOut): boolean {
+  if (prev.postedBy !== current.postedBy) return false;
+  const prevTime = new Date(prev.postedTime).getTime();
+  const currentTime = new Date(current.postedTime).getTime();
+  if (Number.isNaN(prevTime) || Number.isNaN(currentTime)) return false;
+  return currentTime - prevTime < FIVE_MINUTES_MS;
+}
+
+export function MessageList({ messages }: { messages: MessageOut[] }) {
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -25,14 +30,26 @@ export function MessageList({
   }
 
   return (
-    <div className="divide-y divide-slate-100">
-      {messages.map((message) => (
-        <MessageItem
-          key={message.messageId}
-          message={message}
-          isMine={message.postedBy === currentUser?.userId}
-        />
-      ))}
+    <div className="py-3">
+      {messages.map((message, index) => {
+        const previous = index > 0 ? messages[index - 1] : null;
+        const newDay = !previous || dateKey(previous.postedTime) !== dateKey(message.postedTime);
+        const compact = !newDay && previous ? shouldGroupWithPrevious(previous, message) : false;
+        return (
+          <Fragment key={message.messageId}>
+            {newDay ? (
+              <div className="flex items-center gap-3 px-5 py-3">
+                <div className="h-px flex-1 bg-slate-200" />
+                <span className="rounded-full border border-slate-200 bg-white px-3 py-0.5 text-xs font-semibold text-slate-600">
+                  {formatDateDivider(message.postedTime)}
+                </span>
+                <div className="h-px flex-1 bg-slate-200" />
+              </div>
+            ) : null}
+            <MessageItem message={message} compact={compact} />
+          </Fragment>
+        );
+      })}
       <div ref={bottomRef} />
     </div>
   );

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, NavLink } from "react-router-dom";
-import { Inbox, Plus, Search, ShieldCheck, User } from "lucide-react";
+import { Inbox, Plus, ShieldCheck, User } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { workspaceApi } from "../../api/workspaces";
 import { CreateWorkspaceDialog } from "../workspaces/CreateWorkspaceDialog";
@@ -50,9 +50,6 @@ export function WorkspaceRail({ selectedWorkspaceId }: { selectedWorkspaceId?: n
         </button>
       </div>
       <div className="flex flex-col items-center gap-2 border-t border-slate-800 pt-3">
-        <NavLink to="/app/search" title="Search" className="rail-link">
-          <Search className="h-4 w-4" />
-        </NavLink>
         <NavLink to="/app/invitations" title="Invitations" className="rail-link">
           <Inbox className="h-4 w-4" />
         </NavLink>

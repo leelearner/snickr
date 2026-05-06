@@ -1,12 +1,10 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
-import { UserPlus } from "lucide-react";
+import { Hash, Lock, MessageSquare, UserPlus, Users } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { channelApi } from "../api/channels";
 import { messageApi } from "../api/messages";
 import { useAuth } from "../context/AuthContext";
-import { Badge } from "../components/common/Badge";
-import { Button } from "../components/common/Button";
 import { ErrorState } from "../components/common/ErrorState";
 import { LoadingSpinner } from "../components/common/LoadingSpinner";
 import { ChannelMembersPanel } from "../components/channels/ChannelMembersPanel";
@@ -22,6 +20,7 @@ export function ChannelPage() {
   const numericWorkspaceId = Number(workspaceId);
   const { user } = useAuth();
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [membersPanelOpen, setMembersPanelOpen] = useState(false);
   const channelQuery = useQuery({
     queryKey: queryKeys.channel(numericChannelId),
     queryFn: () => channelApi.get(numericChannelId),
@@ -38,34 +37,44 @@ export function ChannelPage() {
 
   const channel = channelQuery.data;
   if (!channel) return null;
+
   const directPeer = channel.members.find((member) => member.userId !== user?.userId);
-  const title =
+  const headerName =
     channel.type === "direct"
       ? directPeer?.nickname ?? directPeer?.username ?? "Direct message"
-      : `# ${channel.channelName}`;
+      : channel.channelName;
+
+  const HeaderIcon = channel.type === "private" ? Lock : channel.type === "direct" ? MessageSquare : Hash;
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex items-start justify-between gap-3 border-b border-slate-200 px-5 py-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-lg font-semibold text-slate-950">
-              {title}
-            </h1>
-            <Badge tone={channel.type === "public" ? "emerald" : "neutral"}>{channel.type}</Badge>
-          </div>
-          <p className="mt-1 text-sm text-slate-500">
-            {channel.type === "direct" ? "Direct message" : `${channel.members.length} members`}
-          </p>
+      <div className="flex h-12 shrink-0 items-center justify-between gap-3 border-b border-slate-200 px-4">
+        <div className="flex min-w-0 items-center gap-1.5">
+          <HeaderIcon className="h-4 w-4 text-slate-500" />
+          <h1 className="truncate text-base font-semibold text-slate-950">{headerName}</h1>
         </div>
-        <div className="flex gap-2">
-          {!channel.isMember && channel.type === "public" ? (
-            <JoinChannelButton channelId={channel.channelId} workspaceId={numericWorkspaceId} />
+        <div className="flex items-center gap-1">
+          {channel.type !== "direct" ? (
+            <button
+              onClick={() => setMembersPanelOpen((open) => !open)}
+              className="flex items-center gap-1.5 rounded-md px-2 py-1 text-sm text-slate-600 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+              title="Members"
+            >
+              <Users className="h-4 w-4" />
+              <span>{channel.members.length}</span>
+            </button>
           ) : null}
           {channel.isMember && channel.type !== "direct" ? (
-            <Button variant="secondary" leftIcon={<UserPlus className="h-4 w-4" />} onClick={() => setInviteOpen(true)}>
-              Invite
-            </Button>
+            <button
+              className="rounded-md p-1.5 text-slate-600 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+              onClick={() => setInviteOpen(true)}
+              title="Invite people"
+            >
+              <UserPlus className="h-4 w-4" />
+            </button>
+          ) : null}
+          {!channel.isMember && channel.type === "public" ? (
+            <JoinChannelButton channelId={channel.channelId} workspaceId={numericWorkspaceId} />
           ) : null}
         </div>
       </div>
@@ -79,16 +88,19 @@ export function ChannelPage() {
             ) : messagesQuery.error ? (
               <div className="p-5"><ErrorState error={messagesQuery.error} /></div>
             ) : (
-              <MessageList messages={messagesQuery.data ?? []} currentUser={user} />
+              <MessageList messages={messagesQuery.data ?? []} />
             )}
           </div>
           <MessageComposer channelId={channel.channelId} disabled={!channel.isMember} />
         </div>
-        <ChannelMembersPanel
-          members={channel.members}
-          workspaceId={numericWorkspaceId}
-          currentUserId={user?.userId}
-        />
+        {membersPanelOpen ? (
+          <ChannelMembersPanel
+            members={channel.members}
+            workspaceId={numericWorkspaceId}
+            currentUserId={user?.userId}
+            onClose={() => setMembersPanelOpen(false)}
+          />
+        ) : null}
       </div>
       <InviteChannelUserDialog channelId={channel.channelId} open={inviteOpen} onClose={() => setInviteOpen(false)} />
     </div>
