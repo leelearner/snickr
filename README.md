@@ -21,7 +21,7 @@ snickr/
 | Path | Contents |
 |---|---|
 | `backend/` | API server. See `backend/README.md`. |
-| `frontend/` | Web UI. See `frontend/README.md`. |
+| `frontend/` | Web UI. See `frontend/how-to-run.md`. |
 | `database/schema/schema.sql` | `CREATE TABLE` and index DDL |
 | `database/migrations/` | Incremental schema changes, numbered `001_*`, `002_*`, `003_*` |
 | `database/seeds/sample_data.sql` | Test data: 6 users, 2 workspaces, 5 channels, 4 invitations, 9 messages |
@@ -73,14 +73,13 @@ Interactive API explorer: http://127.0.0.1:8000/docs
 
 ```bash
 cd frontend
-cp .env.example .env.local       # VITE_API_BASE_URL=http://127.0.0.1:8000
 npm install
-npm run dev -- --host 127.0.0.1
+npm run dev
 ```
 
 Open http://127.0.0.1:5173/.
 
-> Use the same host across frontend and backend, either `127.0.0.1` or `localhost`. Mixing the two prevents the `snickr_session` cookie from being sent. See `frontend/how-to-run.md` for troubleshooting.
+Vite proxies `/api/*` to the backend on `127.0.0.1:8000`, so the browser only ever talks to Vite. No CORS or cookie-host setup is needed. See `frontend/how-to-run.md` for troubleshooting.
 
 ## Tests
 
@@ -105,5 +104,5 @@ pytest
 - Schema overview, ER diagram, and design rationale: `docs/report/snickr-part1.pdf`
 - Backend layout and conventions: `backend/README.md`
 - Backend endpoints, stored procedures, transactions, security: `backend/SNICKR_BACKEND_DESIGN.md`
-- Frontend layout and conventions: `frontend/README.md`
+- Frontend run instructions: `frontend/how-to-run.md`
 - Frontend routes, page and API mapping, visual style: `frontend/SNICKR_FRONTEND_DESIGN.md`

@@ -6,32 +6,14 @@
 - npm
 - The Snickr FastAPI backend running on `http://127.0.0.1:8000`
 
-The frontend is a Vite + React + TypeScript app.
+The frontend is a Vite + React + TypeScript app. Vite proxies `/api/*` to the backend, so the browser only ever talks to Vite at `:5173`. There is no CORS or cookie-host configuration to worry about.
 
 ## Install Dependencies
-
-From the repository root:
 
 ```bash
 cd frontend
 npm install
 ```
-
-## Configure the API URL
-
-For local development, use:
-
-```bash
-VITE_API_BASE_URL=http://127.0.0.1:8000
-```
-
-This project includes a local example:
-
-```bash
-cp .env.example .env.local
-```
-
-The frontend and backend hosts should match consistently. If you open the frontend at `http://127.0.0.1:5173`, use `http://127.0.0.1:8000` for the API. Mixing `localhost` and `127.0.0.1` can prevent the browser from sending the `snickr_session` cookie correctly.
 
 ## Start the Backend
 
@@ -43,16 +25,11 @@ conda activate snickr
 uvicorn app.main:app --reload --port 8000
 ```
 
-Check that it is healthy:
+Sanity check:
 
 ```bash
 curl http://127.0.0.1:8000/api/health
-```
-
-Expected response:
-
-```json
-{"ok": true, "db": "..."}
+# {"ok": true, "db": "..."}
 ```
 
 ## Start the Frontend
@@ -61,54 +38,38 @@ In another terminal:
 
 ```bash
 cd frontend
-npm run dev -- --host 127.0.0.1
+npm run dev
 ```
 
 Open:
 
-```text
+```
 http://127.0.0.1:5173/
 ```
 
+`localhost:5173` also works because Vite is bound to `127.0.0.1` and the proxy makes host names interchangeable from the browser's perspective.
+
 ## Build Check
 
-Run this before submitting or demoing:
+Run before submitting or demoing:
 
 ```bash
 cd frontend
 npm run build
 ```
 
-The build command runs TypeScript checks and creates a production bundle in `dist/`.
+The build runs TypeScript checks and produces a production bundle in `dist/`.
 
 ## Common Issues
 
-### Register or login works, but `/api/auth/me` returns 401
+### Vite starts but the page never loads
 
-Use one host consistently:
+Confirm Vite is bound to IPv4. `vite.config.ts` sets `server.host = "127.0.0.1"` so this should be automatic. If you see Vite say it is listening on `[::1]:5173`, the config did not take effect, restart `npm run dev`.
 
-- frontend: `http://127.0.0.1:5173`
-- backend: `http://127.0.0.1:8000`
-- `VITE_API_BASE_URL=http://127.0.0.1:8000`
+### `/api/...` requests 502 from Vite
 
-Then clear site data or use a private browser window.
+The backend is not running on `127.0.0.1:8000`, or it is bound to a different host. Re-run the backend start commands above and confirm `curl http://127.0.0.1:8000/api/health` returns 200.
 
-### CORS error or `Disallowed CORS origin`
+### Need to point at a different backend host
 
-Make sure the backend `.env` allows the frontend origin:
-
-```text
-FRONTEND_ORIGIN=http://localhost:5173,http://127.0.0.1:5173
-```
-
-Restart the backend after changing `.env`.
-
-### API requests fail
-
-Confirm the backend is running:
-
-```bash
-curl http://127.0.0.1:8000/api/health
-```
-
-Also confirm the frontend has the correct API base URL in `.env.local`.
+Set `VITE_API_BASE_URL` in `frontend/.env.local`, for example `VITE_API_BASE_URL=http://10.0.0.42:8000`. This bypasses the proxy and makes the frontend call that URL directly. Cookies will only flow if the remote backend's CORS and cookie settings cooperate.
