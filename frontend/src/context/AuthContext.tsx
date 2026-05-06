@@ -54,29 +54,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [queryClient]);
 
   useEffect(() => {
-    const refreshCurrentSession = async () => {
-      await queryClient.invalidateQueries();
-      await queryClient.refetchQueries({ queryKey: queryKeys.me });
-    };
-
     const channel = new BroadcastChannel(AUTH_CHANNEL_NAME);
     channel.onmessage = (event) => {
       if (event.data?.type === "auth-changed") {
-        void refreshCurrentSession();
+        void queryClient.invalidateQueries();
       }
     };
-
-    const handleFocus = () => {
-      void refreshCurrentSession();
-    };
-
-    window.addEventListener("focus", handleFocus);
-    document.addEventListener("visibilitychange", handleFocus);
-
     return () => {
       channel.close();
-      window.removeEventListener("focus", handleFocus);
-      document.removeEventListener("visibilitychange", handleFocus);
     };
   }, [queryClient]);
 
