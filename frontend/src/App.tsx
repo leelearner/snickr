@@ -35,7 +35,6 @@ export default function App() {
           <Route path="workspaces/:workspaceId" element={<WorkspaceHomePage />} />
           <Route path="workspaces/:workspaceId/channels/:channelId" element={<ChannelPage />} />
           <Route path="workspaces/:workspaceId/members" element={<WorkspaceMembersPage />} />
-          <Route path="workspaces/:workspaceId/invitations" element={<WorkspaceMembersPage />} />
           <Route path="invitations" element={<InvitationsPage />} />
           <Route path="search" element={<SearchPage />} />
           <Route path="profile" element={<ProfilePage />} />

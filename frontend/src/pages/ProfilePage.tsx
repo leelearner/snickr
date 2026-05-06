@@ -1,10 +1,10 @@
 import { FormEvent, useState } from "react";
+import { Check } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { authApi } from "../api/auth";
 import { useAuth } from "../context/AuthContext";
 import { Avatar } from "../components/common/Avatar";
 import { Button } from "../components/common/Button";
-import { ErrorState } from "../components/common/ErrorState";
 import { Input } from "../components/common/Input";
 import { MainContent } from "../components/layout/MainContent";
 import { errorMessage } from "../utils/format";
@@ -17,13 +17,17 @@ export function ProfilePage() {
   const [nickname, setNickname] = useState(user?.nickname ?? "");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
-  const [message, setMessage] = useState("");
+  const [accountFlash, setAccountFlash] = useState("");
+  const [passwordFlash, setPasswordFlash] = useState("");
+  const [accountValidation, setAccountValidation] = useState("");
+  const [passwordValidation, setPasswordValidation] = useState("");
+
   const profileMutation = useMutation({
     mutationFn: authApi.updateMe,
     onSuccess: async (updated) => {
       setAuthUser(updated);
       await queryClient.invalidateQueries({ queryKey: queryKeys.me });
-      setMessage("Profile updated.");
+      setAccountFlash("Profile updated.");
     },
   });
   const passwordMutation = useMutation({
@@ -33,28 +37,34 @@ export function ProfilePage() {
       await queryClient.invalidateQueries({ queryKey: queryKeys.me });
       setCurrentPassword("");
       setNewPassword("");
-      setMessage("Password updated.");
+      setPasswordFlash("Password updated.");
     },
   });
 
   function updateProfile(event: FormEvent) {
     event.preventDefault();
+    setAccountFlash("");
     const payload = { email: email.trim(), nickname: nickname.trim() || null };
-    if (!payload.email || (payload.nickname?.length ?? 0) > 30) {
-      setMessage("Email is required and nickname must be 30 characters or fewer.");
+    if (!payload.email) {
+      setAccountValidation("Email is required.");
       return;
     }
-    setMessage("");
+    if ((payload.nickname?.length ?? 0) > 30) {
+      setAccountValidation("Display name must be 30 characters or fewer.");
+      return;
+    }
+    setAccountValidation("");
     profileMutation.mutate(payload);
   }
 
   function updatePassword(event: FormEvent) {
     event.preventDefault();
+    setPasswordFlash("");
     if (!currentPassword || !newPassword) {
-      setMessage("Current password and new password are required.");
+      setPasswordValidation("Both current and new password are required.");
       return;
     }
-    setMessage("");
+    setPasswordValidation("");
     passwordMutation.mutate({ currentPassword, newPassword });
   }
 
@@ -62,34 +72,98 @@ export function ProfilePage() {
 
   return (
     <MainContent>
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4 border-b border-slate-200 pb-6">
         <Avatar name={displayName} className="h-16 w-16 text-xl" />
         <div className="min-w-0">
           <h1 className="truncate text-2xl font-semibold text-slate-950">{displayName}</h1>
           <p className="truncate text-sm text-slate-500">@{user?.username}</p>
         </div>
       </div>
-      <div className="mt-6 grid gap-4 lg:grid-cols-2">
-        <form className="space-y-4 rounded-lg border border-slate-200 bg-white p-5" onSubmit={updateProfile}>
-          <h2 className="text-base font-semibold text-slate-950">Account details</h2>
+
+      <form className="border-b border-slate-200 py-6" onSubmit={updateProfile}>
+        <div className="mb-4">
+          <h2 className="text-base font-semibold text-slate-950">Account</h2>
+          <p className="mt-0.5 text-sm text-slate-500">
+            Update how teammates find you and where Snickr can reach you.
+          </p>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
           <Input label="Username" value={user?.username ?? ""} disabled />
-          <Input label="Email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} />
-          <Input label="Nickname" value={nickname} maxLength={30} onChange={(event) => setNickname(event.target.value)} />
-          {profileMutation.error ? <ErrorState error={profileMutation.error} /> : null}
-          <Button type="submit" isLoading={profileMutation.isPending}>Save profile</Button>
-        </form>
-        <form className="space-y-4 rounded-lg border border-slate-200 bg-white p-5" onSubmit={updatePassword}>
-          <h2 className="text-base font-semibold text-slate-950">Change password</h2>
-          <Input label="Current password" type="password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} />
-          <Input label="New password" type="password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} />
-          {passwordMutation.error ? <ErrorState error={passwordMutation.error} /> : null}
-          <Button type="submit" isLoading={passwordMutation.isPending}>Change password</Button>
-        </form>
-      </div>
-      {message ? <p className="mt-4 text-sm text-slate-600">{message}</p> : null}
-      {(profileMutation.error || passwordMutation.error) ? (
-        <p className="mt-2 text-sm text-red-600">{errorMessage(profileMutation.error ?? passwordMutation.error)}</p>
-      ) : null}
+          <Input
+            label="Email"
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+          />
+          <div className="sm:col-span-2">
+            <Input
+              label="Display name"
+              value={nickname}
+              maxLength={30}
+              onChange={(event) => setNickname(event.target.value)}
+              placeholder="Optional"
+            />
+            <p className="mt-1 text-xs text-slate-500">
+              Shown next to your messages. Leave empty to use your username.
+            </p>
+          </div>
+        </div>
+        {accountValidation ? <p className="mt-3 text-sm text-red-600">{accountValidation}</p> : null}
+        {profileMutation.error ? (
+          <p className="mt-3 text-sm text-red-600">{errorMessage(profileMutation.error)}</p>
+        ) : null}
+        <div className="mt-5 flex items-center justify-between gap-3">
+          {accountFlash ? (
+            <p className="flex items-center gap-1.5 text-sm text-emerald-700">
+              <Check className="h-4 w-4" />
+              {accountFlash}
+            </p>
+          ) : <span />}
+          <Button type="submit" isLoading={profileMutation.isPending}>
+            Save changes
+          </Button>
+        </div>
+      </form>
+
+      <form className="py-6" onSubmit={updatePassword}>
+        <div className="mb-4">
+          <h2 className="text-base font-semibold text-slate-950">Password</h2>
+          <p className="mt-0.5 text-sm text-slate-500">
+            Confirm your current password before setting a new one.
+          </p>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Input
+            label="Current password"
+            type="password"
+            value={currentPassword}
+            onChange={(event) => setCurrentPassword(event.target.value)}
+            autoComplete="current-password"
+          />
+          <Input
+            label="New password"
+            type="password"
+            value={newPassword}
+            onChange={(event) => setNewPassword(event.target.value)}
+            autoComplete="new-password"
+          />
+        </div>
+        {passwordValidation ? <p className="mt-3 text-sm text-red-600">{passwordValidation}</p> : null}
+        {passwordMutation.error ? (
+          <p className="mt-3 text-sm text-red-600">{errorMessage(passwordMutation.error)}</p>
+        ) : null}
+        <div className="mt-5 flex items-center justify-between gap-3">
+          {passwordFlash ? (
+            <p className="flex items-center gap-1.5 text-sm text-emerald-700">
+              <Check className="h-4 w-4" />
+              {passwordFlash}
+            </p>
+          ) : <span />}
+          <Button type="submit" isLoading={passwordMutation.isPending}>
+            Change password
+          </Button>
+        </div>
+      </form>
     </MainContent>
   );
 }

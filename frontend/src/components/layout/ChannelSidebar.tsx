@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, NavLink } from "react-router-dom";
-import { ChevronDown, ChevronRight, Hash, Lock, MessageSquare, Plus, Settings, Users } from "lucide-react";
+import { ChevronDown, ChevronRight, Hash, Lock, MessageSquare, Plus, Users } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { channelApi } from "../../api/channels";
 import { workspaceApi } from "../../api/workspaces";
@@ -60,7 +60,7 @@ export function ChannelSidebar({ workspaceId }: { workspaceId?: number }) {
           className={({ isActive }) =>
             `flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-1 text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white ${
               isActive
-                ? "bg-blue-600 font-semibold text-white"
+                ? "bg-blue-700 font-semibold text-white"
                 : "text-slate-300 hover:bg-slate-800 hover:text-white"
             }`
           }
@@ -129,20 +129,13 @@ export function ChannelSidebar({ workspaceId }: { workspaceId?: number }) {
           ) : null}
         </section>
       </nav>
-      <div className="space-y-1 border-t border-slate-800 p-2">
+      <div className="border-t border-slate-800 p-2">
         <Link
           to={`/app/workspaces/${workspaceId}/members`}
           className="flex items-center gap-2 rounded-md px-2 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white"
         >
           <Users className="h-4 w-4" />
           Members
-        </Link>
-        <Link
-          to={`/app/workspaces/${workspaceId}/invitations`}
-          className="flex items-center gap-2 rounded-md px-2 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white"
-        >
-          <Settings className="h-4 w-4" />
-          Workspace tools
         </Link>
       </div>
       <CreateChannelDialog
