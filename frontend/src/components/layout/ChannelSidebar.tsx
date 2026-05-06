@@ -60,7 +60,7 @@ export function ChannelSidebar({ workspaceId }: { workspaceId?: number }) {
           className={({ isActive }) =>
             `flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-1 text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white ${
               isActive
-                ? "bg-slate-700 text-white"
+                ? "bg-blue-600 font-semibold text-white"
                 : "text-slate-300 hover:bg-slate-800 hover:text-white"
             }`
           }

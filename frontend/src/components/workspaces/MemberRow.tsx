@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
-import { MessageSquare } from "lucide-react";
+import { MessageSquare, Trash2 } from "lucide-react";
 import type { WorkspaceMember } from "../../types/api";
 import { formatDate } from "../../utils/format";
 import { queryKeys } from "../../utils/queryKeys";
@@ -43,53 +43,69 @@ export function MemberRow({
     },
   });
 
+  const isSelf = member.userId === currentUserId;
+  const showActions = !isSelf || canManage;
+  const error = roleMutation.error ?? removeMutation.error ?? dmMutation.error;
+
   return (
-    <div className="grid grid-cols-[1fr_auto] gap-4 border-b border-slate-200 px-1 py-3 last:border-b-0">
+    <div className="group grid grid-cols-[1fr_auto] gap-4 px-1 py-2.5 transition hover:bg-slate-50">
       <div className="flex min-w-0 items-center gap-3">
-        <Avatar name={member.nickname ?? member.username} />
+        <Avatar name={member.nickname ?? member.username} className="h-9 w-9" />
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <Link
-              className="truncate font-bold text-slate-950 hover:underline"
+              className="truncate text-sm font-semibold text-slate-950 hover:underline"
               to={`/app/users/${member.userId}/messages`}
             >
               {member.nickname ?? member.username}
             </Link>
-            <Badge tone={member.role === "admin" ? "blue" : "neutral"}>{member.role}</Badge>
+            {member.role === "admin" ? <Badge tone="blue">admin</Badge> : null}
+            {isSelf ? <span className="text-xs text-slate-400">(you)</span> : null}
           </div>
-          <p className="text-sm text-slate-500">
+          <p className="truncate text-xs text-slate-500">
             @{member.username} joined {formatDate(member.joinedTime)}
           </p>
         </div>
       </div>
-      {member.userId !== currentUserId || canManage ? (
-        <div className="flex items-center gap-2">
-          {member.userId !== currentUserId ? (
+      {showActions ? (
+        <div className="flex items-center gap-1.5 opacity-0 transition group-hover:opacity-100 focus-within:opacity-100">
+          {!isSelf ? (
             <Button
-              variant="secondary"
+              variant="ghost"
+              className="h-8 px-2"
               leftIcon={<MessageSquare className="h-4 w-4" />}
               isLoading={dmMutation.isPending}
               onClick={() => dmMutation.mutate()}
+              title="Direct message"
             >
               Message
             </Button>
           ) : null}
           {canManage ? (
             <>
-              <Button variant="secondary" isLoading={roleMutation.isPending} onClick={() => roleMutation.mutate()}>
-                {member.role === "admin" ? "Make member" : "Make admin"}
+              <Button
+                variant="secondary"
+                className="h-8 px-2 text-xs"
+                isLoading={roleMutation.isPending}
+                onClick={() => roleMutation.mutate()}
+              >
+                {member.role === "admin" ? "Demote" : "Promote"}
               </Button>
-              <Button variant="danger" isLoading={removeMutation.isPending} onClick={() => removeMutation.mutate()}>
-                Remove
+              <Button
+                variant="ghost"
+                className="h-8 w-8 px-0 text-red-600 hover:bg-red-50"
+                isLoading={removeMutation.isPending}
+                onClick={() => removeMutation.mutate()}
+                title="Remove from workspace"
+              >
+                <Trash2 className="h-4 w-4" />
               </Button>
             </>
           ) : null}
         </div>
       ) : null}
-      {(roleMutation.error || removeMutation.error || dmMutation.error) ? (
-        <p className="col-span-2 text-sm text-red-600">
-          {String((roleMutation.error ?? removeMutation.error ?? dmMutation.error) && ((roleMutation.error ?? removeMutation.error ?? dmMutation.error) as Error).message)}
-        </p>
+      {error ? (
+        <p className="col-span-2 text-sm text-red-600">{(error as Error).message}</p>
       ) : null}
     </div>
   );

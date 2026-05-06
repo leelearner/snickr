@@ -2,6 +2,7 @@ import { FormEvent, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { authApi } from "../api/auth";
 import { useAuth } from "../context/AuthContext";
+import { Avatar } from "../components/common/Avatar";
 import { Button } from "../components/common/Button";
 import { ErrorState } from "../components/common/ErrorState";
 import { Input } from "../components/common/Input";
@@ -57,20 +58,28 @@ export function ProfilePage() {
     passwordMutation.mutate({ currentPassword, newPassword });
   }
 
+  const displayName = user?.nickname ?? user?.username ?? "";
+
   return (
     <MainContent>
-      <h1 className="text-xl font-semibold text-slate-950">Profile</h1>
+      <div className="flex items-center gap-4">
+        <Avatar name={displayName} className="h-16 w-16 text-xl" />
+        <div className="min-w-0">
+          <h1 className="truncate text-2xl font-semibold text-slate-950">{displayName}</h1>
+          <p className="truncate text-sm text-slate-500">@{user?.username}</p>
+        </div>
+      </div>
       <div className="mt-6 grid gap-4 lg:grid-cols-2">
-        <form className="space-y-4 rounded-lg border border-slate-200 bg-white p-4" onSubmit={updateProfile}>
-          <h2 className="font-semibold text-slate-950">Account details</h2>
+        <form className="space-y-4 rounded-lg border border-slate-200 bg-white p-5" onSubmit={updateProfile}>
+          <h2 className="text-base font-semibold text-slate-950">Account details</h2>
           <Input label="Username" value={user?.username ?? ""} disabled />
           <Input label="Email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} />
           <Input label="Nickname" value={nickname} maxLength={30} onChange={(event) => setNickname(event.target.value)} />
           {profileMutation.error ? <ErrorState error={profileMutation.error} /> : null}
           <Button type="submit" isLoading={profileMutation.isPending}>Save profile</Button>
         </form>
-        <form className="space-y-4 rounded-lg border border-slate-200 bg-white p-4" onSubmit={updatePassword}>
-          <h2 className="font-semibold text-slate-950">Change password</h2>
+        <form className="space-y-4 rounded-lg border border-slate-200 bg-white p-5" onSubmit={updatePassword}>
+          <h2 className="text-base font-semibold text-slate-950">Change password</h2>
           <Input label="Current password" type="password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} />
           <Input label="New password" type="password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} />
           {passwordMutation.error ? <ErrorState error={passwordMutation.error} /> : null}

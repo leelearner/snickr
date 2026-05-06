@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Plus } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { workspaceApi } from "../api/workspaces";
+import { Avatar } from "../components/common/Avatar";
 import { Badge } from "../components/common/Badge";
 import { Button } from "../components/common/Button";
 import { EmptyState } from "../components/common/EmptyState";
@@ -38,9 +39,10 @@ export function WorkspaceListPage() {
             to={`/app/workspaces/${workspace.workspaceId}`}
             className="rounded-lg border border-slate-200 bg-white p-4 transition hover:border-slate-300 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
           >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h2 className="font-semibold text-slate-950">{workspace.name}</h2>
+            <div className="flex items-start gap-3">
+              <Avatar name={workspace.name} className="h-12 w-12 text-base" />
+              <div className="min-w-0 flex-1">
+                <h2 className="truncate font-semibold text-slate-950">{workspace.name}</h2>
                 <p className="mt-1 line-clamp-2 text-sm text-slate-500">{workspace.description ?? "No description"}</p>
               </div>
               <Badge tone={workspace.myRole === "admin" ? "blue" : "neutral"}>{workspace.myRole}</Badge>
