@@ -68,17 +68,19 @@ export function ChannelSidebar({ workspaceId }: { workspaceId?: number }) {
   const directChannels = channels.filter((channel) => channel.type === "direct");
 
   function renderChannel(channel: ChannelSummary) {
+    const isActive = activeChannelId === channel.channelId;
     return (
-      <div key={channel.channelId} className="group flex items-center gap-1">
+      <div
+        key={channel.channelId}
+        className={`group flex items-center gap-1 rounded-md pr-1 text-sm transition ${
+          isActive
+            ? "bg-blue-700 font-semibold text-white"
+            : "text-slate-300 hover:bg-slate-800 hover:text-white"
+        }`}
+      >
         <NavLink
           to={`/app/workspaces/${workspaceId}/channels/${channel.channelId}`}
-          className={({ isActive }) =>
-            `flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-1 text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white ${
-              isActive
-                ? "bg-blue-700 font-semibold text-white"
-                : "text-slate-300 hover:bg-slate-800 hover:text-white"
-            }`
-          }
+          className="flex min-w-0 flex-1 items-center gap-2 px-2 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
         >
           <ChannelIcon type={channel.type} />
           <span className="truncate">
@@ -99,7 +101,9 @@ export function ChannelSidebar({ workspaceId }: { workspaceId?: number }) {
             }}
             disabled={hideDmMutation.isPending}
             title="Close direct message"
-            className="invisible rounded p-1 text-slate-400 transition hover:bg-slate-800 hover:text-white focus-visible:visible focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white group-hover:visible"
+            className={`rounded p-1 text-current/70 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white ${
+              isActive ? "visible" : "invisible group-hover:visible focus-visible:visible"
+            }`}
           >
             <X className="h-3.5 w-3.5" />
           </button>
