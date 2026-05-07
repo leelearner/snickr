@@ -142,6 +142,33 @@ curl -s -b $DD -X POST $BASE/api/channels/$SHIP/join >/dev/null
 mark "chess fetches Inbox - now contains all three event kinds (mention, dm, join)"
 curl -s -b $CH $BASE/api/me/mentions >/dev/null
 
+# ============= Phase 6.5: thread replies on a parent message =============
+
+mark "chess posts a question in #ship-it that becomes a thread parent"
+PARENT=$(curl -s -b $CH -X POST $BASE/api/channels/$SHIP/messages \
+  -H 'Content-Type: application/json' \
+  -d '{"content":"Should we tag the release v1.0 today?"}' \
+  | python3 -c "import json,sys;print(json.load(sys.stdin)['messageId'])")
+
+mark "dave replies in the thread (parentMessageId set, parent same channel verified)"
+curl -s -b $DD -X POST $BASE/api/channels/$SHIP/messages \
+  -H 'Content-Type: application/json' \
+  -d "{\"content\":\"+1 from me\",\"parentMessageId\":$PARENT}" >/dev/null
+
+mark "chess replies again in the same thread, replyCount on parent now reads 2"
+curl -s -b $CH -X POST $BASE/api/channels/$SHIP/messages \
+  -H 'Content-Type: application/json' \
+  -d "{\"content\":\"merging now then.\",\"parentMessageId\":$PARENT}" >/dev/null
+
+mark "chess fetches the replies for the parent message"
+curl -s -b $CH $BASE/api/channels/$SHIP/messages/$PARENT/replies >/dev/null
+
+mark "dave attempts to reply with a parent from another channel - 400 rejected"
+GENERAL_ID=$(python3 -c "import json,sys;chs=json.load(sys.stdin);print(next(c for c in chs if c['channelName']=='general')['channelId'])" < <(curl -s -b $CH $BASE/api/workspaces/$WS_CS/channels))
+curl -s -b $DD -X POST $BASE/api/channels/$SHIP/messages \
+  -H 'Content-Type: application/json' \
+  -d "{\"content\":\"cross-channel reply\",\"parentMessageId\":$GENERAL_ID}" >/dev/null
+
 # ============= Phase 7: channel invitation flow (private channel) =============
 
 mark "chess creates a private channel #release-prep"

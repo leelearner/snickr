@@ -135,9 +135,12 @@ Notable design choices:
   two participants' user identifiers. Reopening a direct-message
   conversation returns the same channel identifier, so the URL is stable
   and the timeline is preserved.
-- Messages have no parent pointer. The schema can store reply content
-  but not reply structure. A self-referencing foreign key was not added
-  because no UI flow uses one.
+- Thread replies are modelled with a self-referencing
+  `messages.parent_messageID` foreign key rather than a separate
+  `replies` table. A `NULL` parent marks a top-level post; a non-`NULL`
+  parent links a reply to its thread. The same `messages` row therefore
+  serves both timeline and thread, and the existing edit, delete,
+  search, and mention paths apply unchanged.
 - Workspace and channel deletes cascade. Removing a workspace removes
   its channels, members, and invitations. Removing a channel removes its
   messages and members. The `created_by` column on `workspaces` uses
@@ -535,14 +538,12 @@ running and is the canonical reference for path, method, request
 body, and response schema. The conventions that govern those routes
 are described next.
 
-**HTTP method conventions.** The API uses `GET` for reads, `POST` for
-creating new rows or performing actions without a clean `PUT` semantics
-such as accepting an invitation or joining a channel, `PATCH` for
-partial updates to existing rows, and `DELETE` for removals. `PUT` is
-not used because no resource has a fully replaceable representation.
-Resource paths are pluralised, identifiers are numeric, and nested paths
-mirror containment: a channel lives under a workspace, and its messages
-live under the channel.
+**Path conventions.** Resource paths are pluralised, identifiers are
+numeric, and nested paths mirror containment: a channel lives under a
+workspace, its messages live under the channel. `PUT` is not used
+because no resource carries a fully replaceable representation; partial
+edits go through `PATCH` and bespoke actions such as accepting an
+invitation or joining a channel are `POST`.
 
 **Request and response format.** Every request and response body is
 JSON encoded as UTF-8. Field names are camelCase on the wire, while
@@ -551,21 +552,14 @@ column aliases such as `SELECT workspaceID AS "workspaceId"`. Aliasing
 in SQL rather than in a global serialiser keeps the SQL readable and
 makes the mapping inspectable in the source.
 
-**Error handling.** All error responses use FastAPI's default body
-shape, a JSON object with a single `detail` key carrying a human-readable
-string. Status codes follow HTTP conventions: 400 for malformed requests
-that nonetheless pass schema validation, 401 for unauthenticated
-requests, 403 for authenticated requests that lack permission for a
-non-private resource, 404 for missing or private resources hidden from
-the caller, 409 for unique-constraint and lifecycle conflicts such as a
-duplicate invitation, 422 for schema-validation failures emitted by
-Pydantic, and 500 for unhandled server errors. Private and direct
-channels return 404 to non-members rather than 403, hiding the existence
-of a private channel from users who are not invited.
-
-The error body is uniform across endpoints, so the frontend has a single
-error path. The frontend reads `detail` and displays it directly, with a
-fallback to a generic message if the field is missing.
+**Error handling.** Error responses are FastAPI's default JSON shape
+with a single `detail` field. Two project-specific decisions are worth
+calling out. Private and direct channels return 404 to non-members
+rather than 403, so the existence of a private channel is hidden from
+users who are not invited. Lifecycle conflicts such as accepting an
+already-accepted invitation or hitting a unique constraint return 409
+rather than 400, so the frontend can distinguish "your input was
+malformed" from "the server state already disagrees with your action".
 
 **Membership exit.** Two endpoints let a user remove themselves from
 shared resources. `POST /api/channels/{id}/leave` deletes the caller's
@@ -603,16 +597,14 @@ event.
 ### 3.2 Security: guarding against SQL injection
 
 Every query and every stored-procedure invocation passes user input
-through asyncpg's parameter binding. The Postgres extended-query protocol
-treats bound values as data, never as SQL grammar, so input that resembles
-SQL keywords cannot escape its placeholder. There is no codepath in the
-application where user text is concatenated into a SQL string, no
-f-string interpolation of user input, and no manual escaping. The course
-specification calls out stored procedures and prepared statements as
-acceptable mitigations, and the design relies on both. asyncpg uses
-Postgres's extended-query protocol, which prepares each query and binds
-its arguments through the binary protocol; this is the database-side
-equivalent of a prepared statement.
+through asyncpg's parameter binding. The Postgres extended-query
+protocol prepares each statement once and binds its arguments through
+the binary protocol, so input that resembles SQL keywords cannot escape
+its placeholder. There is no codepath in the application where user
+text is concatenated into a SQL string, no f-string interpolation of
+user input, and no manual escaping. The course specification calls out
+stored procedures and prepared statements as acceptable mitigations,
+and the design relies on both.
 
 **Stored procedures as an additional layer.** The two procedures from
 Section 2.4 take typed arguments and are invoked through
@@ -792,16 +784,10 @@ through a `?next=` query parameter on the login form. A user who pastes
 a search URL is taken to the search page with the query prefilled and
 the results computed.
 
-**Session invalidation.** Two paths invalidate a session. A user who
-logs out hits `POST /api/auth/logout`, which clears the server-side
-session dictionary and causes Starlette to set an empty signed cookie on
-the response, so the browser stops sending the user identifier on
-subsequent requests. A user who simply walks away eventually hits the
-cookie's seven-day expiry, after which the browser drops the cookie and
-the next protected request returns 401, redirecting to the login page.
-There is no refresh-token mechanism, so an expired session always sends
-the user back through login. A continuous seven-day session covers any
-realistic demo scenario, and the cost of re-logging in is one form.
+**Session invalidation.** `POST /api/auth/logout` clears the
+server-side session dictionary so the next request from that browser
+fails authentication. There is no refresh-token mechanism: an expired
+seven-day cookie sends the user back through login.
 
 ### 3.5 Cross-site scripting
 
@@ -1160,5 +1146,32 @@ the application.
 2026-05-07 18:36:22 INFO  snickr.http  DELETE /api/workspaces/3 204 uid=1 4ms
 ```
 
-The unabridged transcript of all twelve scenes is committed at
+### 7.13 Thread replies
+
+Chess posts a question in `#ship-it` and Dave replies inside the
+thread. The post handler verifies that the parent message exists and
+lives in the same channel; a request that points at a parent in a
+different channel comes back as 400. The Thread side panel on the right
+of the channel page renders the parent on top, the replies in
+chronological order, and a dedicated composer that auto-attaches the
+correct `parentMessageId`. Replies are filtered out of the main
+timeline by the `hideReplies` prop on `<MessageList>` so the parent's
+"reply count" badge is the only sign that a thread exists.
+
+![Figure 17: Thread side panel on `#ship-it`. Parent on top, replies below, composer pre-bound to the parent.](../session-logs/screenshots/21_thread_panel.png)
+
+```
+### [19:47:38] chess posts a question in #ship-it that becomes a thread parent
+2026-05-07 19:47:38 INFO  snickr.event message.post uid=1 channelId=9 messageId=48 mentions=0 length=37
+### [19:47:38] dave replies in the thread (parentMessageId set, parent same channel verified)
+2026-05-07 19:47:38 INFO  snickr.event message.post uid=6 channelId=9 messageId=49 mentions=0 length=10
+### [19:47:38] chess replies again in the same thread, replyCount on parent now reads 2
+2026-05-07 19:47:39 INFO  snickr.event message.post uid=1 channelId=9 messageId=50 mentions=0 length=17
+### [19:47:39] chess fetches the replies for the parent message
+2026-05-07 19:47:39 INFO  snickr.http  GET  /api/channels/9/messages/48/replies 200 uid=1 9ms
+### [19:47:39] dave attempts to reply with a parent from another channel - 400 rejected
+2026-05-07 19:47:39 INFO  snickr.http  POST /api/channels/9/messages 400 uid=6 2ms
+```
+
+The unabridged transcript of all thirteen scenes is committed at
 `docs/session-logs/session-2026-05-08.txt`.
