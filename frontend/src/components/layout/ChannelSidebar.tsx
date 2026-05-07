@@ -101,9 +101,7 @@ export function ChannelSidebar({ workspaceId }: { workspaceId?: number }) {
             }}
             disabled={hideDmMutation.isPending}
             title="Close direct message"
-            className={`rounded p-1 text-current/70 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white ${
-              isActive ? "visible" : "invisible group-hover:visible focus-visible:visible"
-            }`}
+            className="invisible rounded p-1 text-current/70 transition hover:text-white focus-visible:visible focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white group-hover:visible"
           >
             <X className="h-3.5 w-3.5" />
           </button>
