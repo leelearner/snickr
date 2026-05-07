@@ -121,9 +121,47 @@ async def test_leave_public_channel_drops_membership(make_client, uid):
     assert b["userId"] not in {m["userId"] for m in detail["members"]}
 
 
-async def test_leave_dm_channel_rejected(make_client, uid):
+async def test_leave_dm_hides_from_list_but_keeps_history(make_client, uid):
     alice, bob, _, b, ws_id = await _setup_workspace_with_member(make_client, uid)
     dm_id = (await alice.post(f"/api/workspaces/{ws_id}/direct-messages",
                               json={"targetUserId": b["userId"]})).json()["channelId"]
+    await alice.post(f"/api/channels/{dm_id}/messages", json={"content": "hi"})
+
+    # Alice dismisses the DM. The endpoint succeeds (no 400) and the DM disappears
+    # from her workspace channel list.
     r = await alice.post(f"/api/channels/{dm_id}/leave")
-    assert r.status_code == 400
+    assert r.status_code in (200, 204)
+    alice_channels = (await alice.get(f"/api/workspaces/{ws_id}/channels")).json()
+    assert dm_id not in {c["channelId"] for c in alice_channels}
+
+    # Bob's view of the DM is unaffected.
+    bob_channels = (await bob.get(f"/api/workspaces/{ws_id}/channels")).json()
+    assert dm_id in {c["channelId"] for c in bob_channels}
+
+    # Message history is preserved: alice can still hit the channel directly.
+    msgs = (await alice.get(f"/api/channels/{dm_id}/messages")).json()
+    assert any(m["content"] == "hi" for m in msgs)
+
+
+async def test_dm_reappears_when_partner_sends_message(make_client, uid):
+    alice, bob, _, b, ws_id = await _setup_workspace_with_member(make_client, uid)
+    dm_id = (await alice.post(f"/api/workspaces/{ws_id}/direct-messages",
+                              json={"targetUserId": b["userId"]})).json()["channelId"]
+    await alice.post(f"/api/channels/{dm_id}/leave")
+
+    # Bob posts a fresh message; alice's hidden flag should clear automatically.
+    await bob.post(f"/api/channels/{dm_id}/messages", json={"content": "are you there"})
+    alice_channels = (await alice.get(f"/api/workspaces/{ws_id}/channels")).json()
+    assert dm_id in {c["channelId"] for c in alice_channels}
+
+
+async def test_dm_reappears_when_alice_reopens(make_client, uid):
+    alice, _, _, b, ws_id = await _setup_workspace_with_member(make_client, uid)
+    dm_id = (await alice.post(f"/api/workspaces/{ws_id}/direct-messages",
+                              json={"targetUserId": b["userId"]})).json()["channelId"]
+    await alice.post(f"/api/channels/{dm_id}/leave")
+
+    # Reopening the DM through the same endpoint should bring it back.
+    await alice.post(f"/api/workspaces/{ws_id}/direct-messages", json={"targetUserId": b["userId"]})
+    alice_channels = (await alice.get(f"/api/workspaces/{ws_id}/channels")).json()
+    assert dm_id in {c["channelId"] for c in alice_channels}

@@ -85,6 +85,14 @@ reproducible.
   delete endpoints reject any message whose `system_kind` is not NULL so
   the row remains tamper-proof. The Inbox uses the same column to classify
   notifications as `join` rather than relying on a fragile content match.
+- `007_channelmember_hidden_at.sql` adds a `hidden_at` column to
+  `channelmember`. A NULL value means the membership row is visible in
+  the user's channel list. A non-NULL timestamp means the user has
+  dismissed a direct-message channel from their list. The membership
+  row is intentionally kept so message history stays accessible and the
+  partner is unaffected. Reopening the DM through the same endpoint, or
+  the partner posting a new message, clears the timestamp so the channel
+  reappears.
 
 Migrations must be applied in numeric order. Each one is idempotent so
 re-running is safe, and the seed data in `database/seeds/sample_data.sql`
@@ -588,9 +596,13 @@ it directly, with a fallback to a generic message if the field is missing.
 **Membership exit.** Two endpoints let a user remove themselves from
 shared resources. `POST /api/channels/{id}/leave` deletes the caller's
 row from `channelmember` for any public or private channel they belong
-to and returns 204. Direct-message channels are exempt from this rule
-because both participants are part of the conversation by construction;
-the endpoint returns 400 for that channel type. `DELETE /api/workspaces/{id}`
+to and returns 204. Direct-message channels follow a softer rule because
+both participants are part of the conversation by construction: the same
+endpoint sets `channelmember.hidden_at = NOW()` on the leaver's row
+without deleting it, so the message history is preserved and the
+partner's view is unaffected. The DM reappears in the leaver's list
+when they open it through the direct-message endpoint or when the
+partner posts a new message. `DELETE /api/workspaces/{id}`
 disbands an entire workspace and is restricted to administrators. The
 foreign-key cascade on `workspaces` removes its channels, members, and
 invitations in a single statement, which is why no extra clean-up logic

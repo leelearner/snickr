@@ -23,7 +23,7 @@ snickr/
 | `backend/` | API server. See `backend/README.md`. |
 | `frontend/` | Web UI. See `frontend/how-to-run.md`. |
 | `database/schema/schema.sql` | `CREATE TABLE` and index DDL |
-| `database/migrations/` | Incremental schema changes, numbered `001_*` through `006_*`. Apply in numeric order. |
+| `database/migrations/` | Incremental schema changes, numbered `001_*` through `007_*`. Apply in numeric order. |
 | `database/seeds/sample_data.sql` | Test data: 6 users, 2 workspaces, 5 channels, 4 invitations, 9 messages |
 | `database/seeds/test_queries.sql` | Part c queries with concrete values substituted in |
 | `database/queries/queries.sql` | Parameterised `:name`-style versions of the Part c queries |
@@ -52,6 +52,7 @@ psql -d snickr -f database/migrations/003_message_time_eastern.sql
 psql -d snickr -f database/migrations/004_mentions.sql
 psql -d snickr -f database/migrations/005_message_edit.sql
 psql -d snickr -f database/migrations/006_message_system_kind.sql
+psql -d snickr -f database/migrations/007_channelmember_hidden_at.sql
 psql -d snickr -f database/seeds/sample_data.sql   # optional, loads test data and seeds lookup tables
 ```
 

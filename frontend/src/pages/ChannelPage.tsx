@@ -100,6 +100,21 @@ export function ChannelPage() {
               <LogOut className="h-4 w-4" />
             </button>
           ) : null}
+          {channel.isMember && channel.type === "direct" ? (
+            <button
+              className="rounded-md p-1.5 text-slate-600 hover:bg-slate-100 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 disabled:cursor-not-allowed disabled:opacity-50"
+              onClick={() => {
+                setLeaveError("");
+                if (window.confirm("Hide this conversation? Message history is kept.")) {
+                  leaveMutation.mutate();
+                }
+              }}
+              disabled={leaveMutation.isPending}
+              title="Hide direct message"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
+          ) : null}
           {!channel.isMember && channel.type === "public" ? (
             <JoinChannelButton channelId={channel.channelId} workspaceId={numericWorkspaceId} />
           ) : null}

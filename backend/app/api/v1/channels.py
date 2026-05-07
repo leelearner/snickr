@@ -74,6 +74,10 @@ async def list_channels(
                    SELECT 1 FROM channelmember cm
                     WHERE cm.channelID = c.channelID
                       AND cm.userID    = $2
+                      -- A user who has dismissed a direct message stays in
+                      -- channelmember but the row's hidden_at is set; in that
+                      -- case we drop the channel from their list.
+                      AND (ct.name <> 'direct' OR cm.hidden_at IS NULL)
                )
            )
          ORDER BY c.channel_name
@@ -172,6 +176,12 @@ async def create_or_get_direct_message(
             """,
             [(channel_id, user_id), (channel_id, body.targetUserId)],
         )
+        # Reopening a DM the requester previously dismissed should bring it
+        # back into their list.
+        await conn.execute(
+            "UPDATE channelmember SET hidden_at = NULL WHERE channelID = $1 AND userID = $2",
+            channel_id, user_id,
+        )
 
     return ChannelSummary(
         channelId=channel_id,
@@ -251,7 +261,17 @@ async def leave_channel(
     if ch is None or not await _is_channel_member(conn, user_id, channel_id):
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="channel not found")
     if ch["type"] == "direct":
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="direct messages cannot be left; both sides stay forever")
+        # Soft-hide: keep the membership row so message history stays accessible
+        # and the partner is unaffected; just dismiss it from the leaver's DM list.
+        await conn.execute(
+            """
+            UPDATE channelmember
+               SET hidden_at = timezone('America/New_York', NOW())
+             WHERE channelID = $1 AND userID = $2
+            """,
+            channel_id, user_id,
+        )
+        return
     async with conn.transaction():
         await conn.execute(
             """

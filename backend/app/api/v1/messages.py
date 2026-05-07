@@ -101,6 +101,22 @@ async def post_channel_message(
             """,
             row["messageId"], channel_id, user_id,
         )
+        # If the partner had dismissed the DM, a fresh message brings it back
+        # into their list automatically.
+        await conn.execute(
+            """
+            UPDATE channelmember cm
+               SET hidden_at = NULL
+              FROM channels    c
+              JOIN channeltype ct ON ct.typeID = c.typeID
+             WHERE cm.channelID = c.channelID
+               AND c.channelID  = $1
+               AND ct.name      = 'direct'
+               AND cm.userID   <> $2
+               AND cm.hidden_at IS NOT NULL
+            """,
+            channel_id, user_id,
+        )
     return MessageOut(**dict(row))
 
 
