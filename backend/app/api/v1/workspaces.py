@@ -186,18 +186,23 @@ async def invite_to_workspace(
     if already_member:
         raise HTTPException(status.HTTP_409_CONFLICT, detail="user is already a member")
 
-    try:
-        invitation_id = await conn.fetchval(
-            """
-            INSERT INTO workspaceinvitation
-                  (workspaceID, invitee, inviter, invited_time, status_type)
-            VALUES ($1, $2, $3, NOW(),
-                    (SELECT statusID FROM status WHERE type = 'pending'))
-            RETURNING invitationID
-            """,
-            workspace_id, invitee_id, user_id,
-        )
-    except asyncpg.UniqueViolationError:
+    invitation_id = await conn.fetchval(
+        """
+        INSERT INTO workspaceinvitation
+              (workspaceID, invitee, inviter, invited_time, status_type)
+        VALUES ($1, $2, $3, NOW(),
+                (SELECT statusID FROM status WHERE type = 'pending'))
+        ON CONFLICT (workspaceID, invitee)
+        DO UPDATE
+              SET inviter      = EXCLUDED.inviter,
+                  invited_time = EXCLUDED.invited_time,
+                  status_type  = EXCLUDED.status_type
+            WHERE workspaceinvitation.status_type <> (SELECT statusID FROM status WHERE type = 'pending')
+        RETURNING invitationID
+        """,
+        workspace_id, invitee_id, user_id,
+    )
+    if invitation_id is None:
         raise HTTPException(status.HTTP_409_CONFLICT, detail="invitation already exists")
 
     return {"invitationId": invitation_id}
