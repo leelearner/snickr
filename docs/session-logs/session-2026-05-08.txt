@@ -1,176 +1,195 @@
 
-### [18:36:07] chess logs in with the seeded password
-2026-05-07 18:36:07 INFO  snickr.event auth.login uid=1 username=chess
-2026-05-07 18:36:07 INFO  snickr.http POST /api/auth/login 200 uid=1 286ms
+### [19:47:30] chess logs in with the seeded password
+2026-05-07 19:47:30 INFO  snickr.event auth.login uid=1 username=chess
+2026-05-07 19:47:30 INFO  snickr.http POST /api/auth/login 200 uid=1 233ms
 
-### [18:36:08] chess fetches workspaces she belongs to
-2026-05-07 18:36:08 INFO  snickr.http GET /api/workspaces 200 uid=1 4ms
-2026-05-07 18:36:08 INFO  snickr.http GET /api/auth/me 200 uid=1 1ms
+### [19:47:31] chess fetches workspaces she belongs to
+2026-05-07 19:47:31 INFO  snickr.http GET /api/workspaces 200 uid=1 4ms
+2026-05-07 19:47:31 INFO  snickr.http GET /api/auth/me 200 uid=1 1ms
 
-### [18:36:08] chess fetches workspace detail (member list, role)
-2026-05-07 18:36:08 INFO  snickr.http GET /api/workspaces/1 200 uid=1 4ms
+### [19:47:31] chess fetches workspace detail (member list, role)
+2026-05-07 19:47:31 INFO  snickr.http GET /api/workspaces/1 200 uid=1 3ms
 
-### [18:36:08] chess lists CS6083 channels
-2026-05-07 18:36:08 INFO  snickr.http GET /api/workspaces/1/channels 200 uid=1 10ms
+### [19:47:31] chess lists CS6083 channels
+2026-05-07 19:47:31 INFO  snickr.http GET /api/workspaces/1/channels 200 uid=1 4ms
 
-### [18:36:09] chess reads #general timeline
-2026-05-07 18:36:09 INFO  snickr.http GET /api/channels/1/messages 200 uid=1 3ms
+### [19:47:32] chess reads #general timeline
+2026-05-07 19:47:32 INFO  snickr.http GET /api/channels/1/messages 200 uid=1 6ms
 
-### [18:36:09] chess fetches the cross-workspace admin list
-2026-05-07 18:36:09 INFO  snickr.http GET /api/workspaces/admins 200 uid=1 3ms
+### [19:47:32] chess fetches the cross-workspace admin list
+2026-05-07 19:47:32 INFO  snickr.http GET /api/workspaces/admins 200 uid=1 4ms
 
-### [18:36:09] chess fetches stale channel invites in CS6083 (catches the seeded >5d invite to newcomer)
-2026-05-07 18:36:09 INFO  snickr.http GET /api/workspaces/1/stale-channel-invites 200 uid=1 9ms
+### [19:47:32] chess fetches stale channel invites in CS6083 (catches the seeded >5d invite to newcomer)
+2026-05-07 19:47:32 INFO  snickr.http GET /api/workspaces/1/stale-channel-invites 200 uid=1 3ms
 
-### [18:36:09] chess posts an announcement that @mentions bob
-2026-05-07 18:36:10 INFO  snickr.event message.post uid=1 channelId=1 messageId=38 mentions=1 length=57
-2026-05-07 18:36:10 INFO  snickr.http POST /api/channels/1/messages 201 uid=1 7ms
+### [19:47:33] chess posts an announcement that @mentions bob
+2026-05-07 19:47:33 INFO  snickr.event message.post uid=1 channelId=1 messageId=44 mentions=1 length=57
+2026-05-07 19:47:33 INFO  snickr.http POST /api/channels/1/messages 201 uid=1 19ms
 
-### [18:36:10] bob logs in from another browser
-2026-05-07 18:36:10 INFO  snickr.event auth.login uid=4 username=bob
-2026-05-07 18:36:10 INFO  snickr.http POST /api/auth/login 200 uid=4 228ms
-2026-05-07 18:36:10 INFO  snickr.http GET /api/auth/me 200 uid=4 1ms
+### [19:47:33] bob logs in from another browser
+2026-05-07 19:47:33 INFO  snickr.event auth.login uid=4 username=bob
+2026-05-07 19:47:33 INFO  snickr.http POST /api/auth/login 200 uid=4 234ms
+2026-05-07 19:47:33 INFO  snickr.http GET /api/auth/me 200 uid=4 1ms
 
-### [18:36:10] bob checks his Inbox - sees the new mention
-2026-05-07 18:36:10 INFO  snickr.http GET /api/me/mentions 200 uid=4 10ms
+### [19:47:33] bob checks his Inbox - sees the new mention
+2026-05-07 19:47:33 INFO  snickr.http GET /api/me/mentions 200 uid=4 8ms
 
-### [18:36:11] bob navigates to #general and reads
-2026-05-07 18:36:11 INFO  snickr.http GET /api/channels/1/messages 200 uid=4 3ms
+### [19:47:34] bob navigates to #general and reads
+2026-05-07 19:47:34 INFO  snickr.http GET /api/channels/1/messages 200 uid=4 5ms
 
-### [18:36:11] bob replies @chess in #general
-2026-05-07 18:36:11 INFO  snickr.event message.post uid=4 channelId=1 messageId=39 mentions=1 length=27
-2026-05-07 18:36:11 INFO  snickr.http POST /api/channels/1/messages 201 uid=4 9ms
+### [19:47:34] bob replies @chess in #general
+2026-05-07 19:47:34 INFO  snickr.event message.post uid=4 channelId=1 messageId=45 mentions=1 length=27
+2026-05-07 19:47:34 INFO  snickr.http POST /api/channels/1/messages 201 uid=4 7ms
 
-### [18:36:11] chess edits her announcement (PATCH messages, sets edited_time)
-2026-05-07 18:36:11 INFO  snickr.event message.edit uid=1 channelId=1 messageId=38 mentions=1
-2026-05-07 18:36:11 INFO  snickr.http PATCH /api/channels/1/messages/38 200 uid=1 10ms
+### [19:47:34] chess edits her announcement (PATCH messages, sets edited_time)
+2026-05-07 19:47:34 INFO  snickr.event message.edit uid=1 channelId=1 messageId=44 mentions=1
+2026-05-07 19:47:34 INFO  snickr.http PATCH /api/channels/1/messages/44 200 uid=1 5ms
 
-### [18:36:11] chess posts a throwaway message and then deletes it
-2026-05-07 18:36:12 INFO  snickr.event message.post uid=1 channelId=1 messageId=40 mentions=0 length=18
-2026-05-07 18:36:12 INFO  snickr.http POST /api/channels/1/messages 201 uid=1 6ms
-2026-05-07 18:36:12 INFO  snickr.event message.delete uid=1 channelId=1 messageId=40
-2026-05-07 18:36:12 INFO  snickr.http DELETE /api/channels/1/messages/40 204 uid=1 2ms
+### [19:47:35] chess posts a throwaway message and then deletes it
+2026-05-07 19:47:35 INFO  snickr.event message.post uid=1 channelId=1 messageId=46 mentions=0 length=18
+2026-05-07 19:47:35 INFO  snickr.http POST /api/channels/1/messages 201 uid=1 6ms
+2026-05-07 19:47:35 INFO  snickr.event message.delete uid=1 channelId=1 messageId=46
+2026-05-07 19:47:35 INFO  snickr.http DELETE /api/channels/1/messages/46 204 uid=1 2ms
 
-### [18:36:12] bob tries to edit chess's message - 403 forbidden
-2026-05-07 18:36:12 INFO  snickr.http PATCH /api/channels/1/messages/38 403 uid=4 2ms
+### [19:47:35] bob tries to edit chess's message - 403 forbidden
+2026-05-07 19:47:35 INFO  snickr.http PATCH /api/channels/1/messages/44 403 uid=4 1ms
 
-### [18:36:12] chess searches for 'demo' (4 hits across visible channels)
-2026-05-07 18:36:12 INFO  snickr.event search uid=1 q=demo hits=4
-2026-05-07 18:36:12 INFO  snickr.http GET /api/search 200 uid=1 4ms
+### [19:47:35] chess searches for 'demo' (4 hits across visible channels)
+2026-05-07 19:47:35 INFO  snickr.event search uid=1 q=demo hits=4
+2026-05-07 19:47:35 INFO  snickr.http GET /api/search 200 uid=1 9ms
 
-### [18:36:12] chess views all messages posted by carol
-2026-05-07 18:36:13 INFO  snickr.event auth.login uid=5 username=carol
-2026-05-07 18:36:13 INFO  snickr.http POST /api/auth/login 200 uid=5 226ms
-2026-05-07 18:36:13 INFO  snickr.http GET /api/users/5/messages 200 uid=1 1ms
+### [19:47:35] chess views all messages posted by carol
+2026-05-07 19:47:36 INFO  snickr.event auth.login uid=5 username=carol
+2026-05-07 19:47:36 INFO  snickr.http POST /api/auth/login 200 uid=5 226ms
+2026-05-07 19:47:36 INFO  snickr.http GET /api/users/5/messages 200 uid=1 3ms
 
-### [18:36:13] dave logs in - he has a pending workspace invitation
-2026-05-07 18:36:13 INFO  snickr.event auth.login uid=6 username=dave
-2026-05-07 18:36:13 INFO  snickr.http POST /api/auth/login 200 uid=6 232ms
-2026-05-07 18:36:13 INFO  snickr.http GET /api/auth/me 200 uid=6 1ms
+### [19:47:36] dave logs in - he has a pending workspace invitation
+2026-05-07 19:47:36 INFO  snickr.event auth.login uid=6 username=dave
+2026-05-07 19:47:36 INFO  snickr.http POST /api/auth/login 200 uid=6 227ms
+2026-05-07 19:47:36 INFO  snickr.http GET /api/auth/me 200 uid=6 1ms
 
-### [18:36:13] dave lists pending workspace invitations
-2026-05-07 18:36:13 INFO  snickr.http GET /api/me/workspace-invitations 200 uid=6 3ms
+### [19:47:36] dave lists pending workspace invitations
+2026-05-07 19:47:37 INFO  snickr.http GET /api/me/workspace-invitations 200 uid=6 2ms
 
-### [18:36:14] dave accepts the invitation - accept_workspace_invitation stored procedure runs
-2026-05-07 18:36:14 INFO  snickr.event workspace.invitation_accept uid=6 invitationId=1 workspaceId=1
-2026-05-07 18:36:14 INFO  snickr.http POST /api/me/workspace-invitations/1 200 uid=6 7ms
+### [19:47:37] dave accepts the invitation - accept_workspace_invitation stored procedure runs
+2026-05-07 19:47:37 INFO  snickr.event workspace.invitation_accept uid=6 invitationId=1 workspaceId=1
+2026-05-07 19:47:37 INFO  snickr.http POST /api/me/workspace-invitations/1 200 uid=6 14ms
 
-### [18:36:14] chess creates a new public channel #ship-it (calls create_channel_for_member SP)
-2026-05-07 18:36:14 INFO  snickr.event channel.create uid=1 workspaceId=1 channelId=9 name=ship-it type=public
-2026-05-07 18:36:14 INFO  snickr.http POST /api/workspaces/1/channels 201 uid=1 4ms
+### [19:47:37] chess creates a new public channel #ship-it (calls create_channel_for_member SP)
+2026-05-07 19:47:37 INFO  snickr.event channel.create uid=1 workspaceId=1 channelId=9 name=ship-it type=public
+2026-05-07 19:47:37 INFO  snickr.http POST /api/workspaces/1/channels 201 uid=1 9ms
 
-### [18:36:14] dave self-joins #ship-it (writes system_kind='join' message + mention row to creator chess)
-2026-05-07 18:36:14 INFO  snickr.event channel.join uid=6 channelId=9 new=True
-2026-05-07 18:36:14 INFO  snickr.http POST /api/channels/9/join 200 uid=6 3ms
+### [19:47:37] dave self-joins #ship-it (writes system_kind='join' message + mention row to creator chess)
+2026-05-07 19:47:37 INFO  snickr.event channel.join uid=6 channelId=9 new=True
+2026-05-07 19:47:37 INFO  snickr.http POST /api/channels/9/join 200 uid=6 6ms
 
-### [18:36:14] chess fetches Inbox - now contains all three event kinds (mention, dm, join)
-2026-05-07 18:36:15 INFO  snickr.http GET /api/me/mentions 200 uid=1 20ms
+### [19:47:38] chess fetches Inbox - now contains all three event kinds (mention, dm, join)
+2026-05-07 19:47:38 INFO  snickr.http GET /api/me/mentions 200 uid=1 13ms
 
-### [18:36:15] chess creates a private channel #release-prep
-2026-05-07 18:36:15 INFO  snickr.event channel.create uid=1 workspaceId=1 channelId=10 name=release-prep type=private
-2026-05-07 18:36:15 INFO  snickr.http POST /api/workspaces/1/channels 201 uid=1 2ms
+### [19:47:38] chess posts a question in #ship-it that becomes a thread parent
+2026-05-07 19:47:38 INFO  snickr.event message.post uid=1 channelId=9 messageId=48 mentions=0 length=37
+2026-05-07 19:47:38 INFO  snickr.http POST /api/channels/9/messages 201 uid=1 14ms
 
-### [18:36:15] alice logs in
-2026-05-07 18:36:15 INFO  snickr.event auth.login uid=3 username=alice
-2026-05-07 18:36:15 INFO  snickr.http POST /api/auth/login 200 uid=3 223ms
-2026-05-07 18:36:15 INFO  snickr.http GET /api/auth/me 200 uid=3 1ms
+### [19:47:38] dave replies in the thread (parentMessageId set, parent same channel verified)
+2026-05-07 19:47:38 INFO  snickr.event message.post uid=6 channelId=9 messageId=49 mentions=0 length=10
+2026-05-07 19:47:38 INFO  snickr.http POST /api/channels/9/messages 201 uid=6 5ms
 
-### [18:36:15] alice tries to fetch #release-prep before being invited - 404 hides existence
-2026-05-07 18:36:16 INFO  snickr.http GET /api/channels/10 404 uid=3 2ms
+### [19:47:38] chess replies again in the same thread, replyCount on parent now reads 2
+2026-05-07 19:47:39 INFO  snickr.event message.post uid=1 channelId=9 messageId=50 mentions=0 length=17
+2026-05-07 19:47:39 INFO  snickr.http POST /api/channels/9/messages 201 uid=1 7ms
 
-### [18:36:16] chess invites alice to #release-prep
-2026-05-07 18:36:16 INFO  snickr.event channel.invite uid=1 channelId=10 invitee=alice invitationId=2
-2026-05-07 18:36:16 INFO  snickr.http POST /api/channels/10/invitations 201 uid=1 12ms
+### [19:47:39] chess fetches the replies for the parent message
+2026-05-07 19:47:39 INFO  snickr.http GET /api/channels/9/messages/48/replies 200 uid=1 9ms
 
-### [18:36:16] alice lists pending channel invitations
-2026-05-07 18:36:16 INFO  snickr.http GET /api/me/channel-invitations 200 uid=3 3ms
+### [19:47:39] dave attempts to reply with a parent from another channel - 400 rejected
+2026-05-07 19:47:39 INFO  snickr.http GET /api/workspaces/1/channels 200 uid=1 3ms
+2026-05-07 19:47:39 INFO  snickr.http POST /api/channels/9/messages 400 uid=6 2ms
 
-### [18:36:16] alice accepts the channel invitation
-2026-05-07 18:36:16 INFO  snickr.event channel.invitation_response uid=3 invitationId=2 channelId=10 status=accepted
-2026-05-07 18:36:16 INFO  snickr.http POST /api/me/channel-invitations/2 200 uid=3 7ms
+### [19:47:39] chess creates a private channel #release-prep
+2026-05-07 19:47:39 INFO  snickr.event channel.create uid=1 workspaceId=1 channelId=10 name=release-prep type=private
+2026-05-07 19:47:39 INFO  snickr.http POST /api/workspaces/1/channels 201 uid=1 3ms
 
-### [18:36:17] alice can now read and post in #release-prep
-2026-05-07 18:36:17 INFO  snickr.http GET /api/channels/10/messages 200 uid=3 2ms
-2026-05-07 18:36:17 INFO  snickr.event message.post uid=3 channelId=10 messageId=42 mentions=1 length=22
-2026-05-07 18:36:17 INFO  snickr.http POST /api/channels/10/messages 201 uid=3 5ms
+### [19:47:40] alice logs in
+2026-05-07 19:47:40 INFO  snickr.event auth.login uid=3 username=alice
+2026-05-07 19:47:40 INFO  snickr.http POST /api/auth/login 200 uid=3 232ms
+2026-05-07 19:47:40 INFO  snickr.http GET /api/auth/me 200 uid=3 2ms
 
-### [18:36:17] alice (sole admin of Roommates) tries to demote herself - last-admin guard refuses with 409
-2026-05-07 18:36:17 INFO  snickr.event workspace.last_admin_guard uid=3 workspaceId=2 target=3 action=demote
-2026-05-07 18:36:17 INFO  snickr.http PATCH /api/workspaces/2/members/3/role 409 uid=3 4ms
+### [19:47:40] alice tries to fetch #release-prep before being invited - 404 hides existence
+2026-05-07 19:47:40 INFO  snickr.http GET /api/channels/10 404 uid=3 3ms
 
-### [18:36:17] alice promotes bob to admin first
-2026-05-07 18:36:17 INFO  snickr.event workspace.role_change uid=3 workspaceId=2 target=4 role=admin
-2026-05-07 18:36:17 INFO  snickr.http PATCH /api/workspaces/2/members/4/role 200 uid=3 5ms
+### [19:47:40] chess invites alice to #release-prep
+2026-05-07 19:47:41 INFO  snickr.event channel.invite uid=1 channelId=10 invitee=alice invitationId=2
+2026-05-07 19:47:41 INFO  snickr.http POST /api/channels/10/invitations 201 uid=1 17ms
 
-### [18:36:18] alice now safely demotes herself
-2026-05-07 18:36:18 INFO  snickr.event workspace.role_change uid=3 workspaceId=2 target=3 role=member
-2026-05-07 18:36:18 INFO  snickr.http PATCH /api/workspaces/2/members/3/role 200 uid=3 5ms
+### [19:47:41] alice lists pending channel invitations
+2026-05-07 19:47:41 INFO  snickr.http GET /api/me/channel-invitations 200 uid=3 3ms
 
-### [18:36:18] security: anonymous attacker registers with SQL-injection-shaped nickname (stored as literal text)
-2026-05-07 18:36:18 INFO  snickr.event auth.register uid=9 username=eve
-2026-05-07 18:36:18 INFO  snickr.http POST /api/auth/register 201 uid=9 231ms
+### [19:47:41] alice accepts the channel invitation
+2026-05-07 19:47:41 INFO  snickr.event channel.invitation_response uid=3 invitationId=2 channelId=10 status=accepted
+2026-05-07 19:47:41 INFO  snickr.http POST /api/me/channel-invitations/2 200 uid=3 7ms
 
-### [18:36:18] security: bob runs a SQL-injection-shaped search query (bound as literal substring, returns 0 hits)
-2026-05-07 18:36:18 INFO  snickr.event search uid=4 q="'); DROP TABLE messages; --" hits=0
-2026-05-07 18:36:18 INFO  snickr.http GET /api/search 200 uid=4 3ms
+### [19:47:41] alice can now read and post in #release-prep
+2026-05-07 19:47:41 INFO  snickr.http GET /api/channels/10/messages 200 uid=3 2ms
+2026-05-07 19:47:41 INFO  snickr.event message.post uid=3 channelId=10 messageId=51 mentions=1 length=22
+2026-05-07 19:47:41 INFO  snickr.http POST /api/channels/10/messages 201 uid=3 6ms
 
-### [18:36:19] security: carol posts an XSS payload (stored verbatim, escaped at render)
-2026-05-07 18:36:19 INFO  snickr.event auth.login uid=5 username=carol
-2026-05-07 18:36:19 INFO  snickr.http POST /api/auth/login 200 uid=5 233ms
-2026-05-07 18:36:19 INFO  snickr.event message.post uid=5 channelId=1 messageId=43 mentions=0 length=53
-2026-05-07 18:36:19 INFO  snickr.http POST /api/channels/1/messages 201 uid=5 4ms
+### [19:47:42] alice (sole admin of Roommates) tries to demote herself - last-admin guard refuses with 409
+2026-05-07 19:47:42 INFO  snickr.event workspace.last_admin_guard uid=3 workspaceId=2 target=3 action=demote
+2026-05-07 19:47:42 INFO  snickr.http PATCH /api/workspaces/2/members/3/role 409 uid=3 3ms
 
-### [18:36:19] bob opens a DM with alice in CS6083
-2026-05-07 18:36:19 INFO  snickr.event channel.dm_open uid=4 workspaceId=1 channelId=11 partner=alice
-2026-05-07 18:36:19 INFO  snickr.http POST /api/workspaces/1/direct-messages 201 uid=4 27ms
+### [19:47:42] alice promotes bob to admin first
+2026-05-07 19:47:42 INFO  snickr.event workspace.role_change uid=3 workspaceId=2 target=4 role=admin
+2026-05-07 19:47:42 INFO  snickr.http PATCH /api/workspaces/2/members/4/role 200 uid=3 5ms
 
-### [18:36:19] bob hides the DM from his sidebar (soft delete via hidden_at)
-2026-05-07 18:36:20 INFO  snickr.http GET /api/workspaces/1/channels 200 uid=4 2ms
-2026-05-07 18:36:20 INFO  snickr.event channel.dm_hide uid=4 channelId=8
-2026-05-07 18:36:20 INFO  snickr.http POST /api/channels/8/leave 204 uid=4 2ms
+### [19:47:42] alice now safely demotes herself
+2026-05-07 19:47:42 INFO  snickr.event workspace.role_change uid=3 workspaceId=2 target=3 role=member
+2026-05-07 19:47:42 INFO  snickr.http PATCH /api/workspaces/2/members/3/role 200 uid=3 8ms
 
-### [18:36:20] chess changes her password via PATCH /api/auth/me
-2026-05-07 18:36:20 INFO  snickr.http PATCH /api/auth/me 200 uid=1 471ms
+### [19:47:42] security: anonymous attacker registers with SQL-injection-shaped nickname (stored as literal text)
+2026-05-07 19:47:43 INFO  snickr.event auth.register uid=10 username=eve
+2026-05-07 19:47:43 INFO  snickr.http POST /api/auth/register 201 uid=10 236ms
 
-### [18:36:21] chess logs out, then logs back in with the new password
-2026-05-07 18:36:21 INFO  snickr.event auth.logout uid=1
-2026-05-07 18:36:21 INFO  snickr.http POST /api/auth/logout 200 uid=- 0ms
-2026-05-07 18:36:21 INFO  snickr.event auth.login uid=1 username=chess
-2026-05-07 18:36:21 INFO  snickr.http POST /api/auth/login 200 uid=1 228ms
+### [19:47:43] security: bob runs a SQL-injection-shaped search query (bound as literal substring, returns 0 hits)
+2026-05-07 19:47:43 INFO  snickr.event search uid=4 q="'); DROP TABLE messages; --" hits=0
+2026-05-07 19:47:43 INFO  snickr.http GET /api/search 200 uid=4 3ms
 
-### [18:36:21] chess restores the original password so the seed remains valid
-2026-05-07 18:36:22 INFO  snickr.http PATCH /api/auth/me 200 uid=1 448ms
+### [19:47:43] security: carol posts an XSS payload (stored verbatim, escaped at render)
+2026-05-07 19:47:44 INFO  snickr.event auth.login uid=5 username=carol
+2026-05-07 19:47:44 INFO  snickr.http POST /api/auth/login 200 uid=5 237ms
+2026-05-07 19:47:44 INFO  snickr.event message.post uid=5 channelId=1 messageId=52 mentions=0 length=53
+2026-05-07 19:47:44 INFO  snickr.http POST /api/channels/1/messages 201 uid=5 4ms
 
-### [18:36:22] chess creates a throwaway workspace 'Sandbox' to demo disband
-2026-05-07 18:36:22 INFO  snickr.event workspace.create uid=1 workspaceId=3 name=Sandbox
-2026-05-07 18:36:22 INFO  snickr.http POST /api/workspaces 201 uid=1 4ms
+### [19:47:44] bob opens a DM with alice in CS6083
+2026-05-07 19:47:44 INFO  snickr.event channel.dm_open uid=4 workspaceId=1 channelId=11 partner=alice
+2026-05-07 19:47:44 INFO  snickr.http POST /api/workspaces/1/direct-messages 201 uid=4 27ms
 
-### [18:36:22] chess disbands Sandbox - foreign-key cascade removes channels, members, invites
-2026-05-07 18:36:22 INFO  snickr.event workspace.disband uid=1 workspaceId=3
-2026-05-07 18:36:22 INFO  snickr.http DELETE /api/workspaces/3 204 uid=1 4ms
+### [19:47:44] bob hides the DM from his sidebar (soft delete via hidden_at)
+2026-05-07 19:47:44 INFO  snickr.http GET /api/workspaces/1/channels 200 uid=4 3ms
+2026-05-07 19:47:44 INFO  snickr.event channel.dm_hide uid=4 channelId=8
+2026-05-07 19:47:44 INFO  snickr.http POST /api/channels/8/leave 204 uid=4 2ms
 
-### [18:36:22] chess logs out
-2026-05-07 18:36:22 INFO  snickr.event auth.logout uid=1
-2026-05-07 18:36:22 INFO  snickr.http POST /api/auth/logout 200 uid=- 0ms
+### [19:47:44] chess changes her password via PATCH /api/auth/me
+2026-05-07 19:47:45 INFO  snickr.http PATCH /api/auth/me 200 uid=1 529ms
 
-### [18:36:23] session ends
+### [19:47:45] chess logs out, then logs back in with the new password
+2026-05-07 19:47:45 INFO  snickr.event auth.logout uid=1
+2026-05-07 19:47:45 INFO  snickr.http POST /api/auth/logout 200 uid=- 0ms
+2026-05-07 19:47:46 INFO  snickr.event auth.login uid=1 username=chess
+2026-05-07 19:47:46 INFO  snickr.http POST /api/auth/login 200 uid=1 229ms
+
+### [19:47:46] chess restores the original password so the seed remains valid
+2026-05-07 19:47:46 INFO  snickr.http PATCH /api/auth/me 200 uid=1 466ms
+
+### [19:47:47] chess creates a throwaway workspace 'Sandbox' to demo disband
+2026-05-07 19:47:47 INFO  snickr.event workspace.create uid=1 workspaceId=3 name=Sandbox
+2026-05-07 19:47:47 INFO  snickr.http POST /api/workspaces 201 uid=1 16ms
+
+### [19:47:47] chess disbands Sandbox - foreign-key cascade removes channels, members, invites
+2026-05-07 19:47:47 INFO  snickr.event workspace.disband uid=1 workspaceId=3
+2026-05-07 19:47:47 INFO  snickr.http DELETE /api/workspaces/3 204 uid=1 4ms
+
+### [19:47:47] chess logs out
+2026-05-07 19:47:47 INFO  snickr.event auth.logout uid=1
+2026-05-07 19:47:47 INFO  snickr.http POST /api/auth/logout 200 uid=- 1ms
+
+### [19:47:47] session ends
