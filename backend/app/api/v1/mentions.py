@@ -18,10 +18,10 @@ async def insert_mentions_for_message(
     message_id: int,
     channel_id: int,
     content: str,
-) -> None:
+) -> int:
     handles = list({match.group(1) for match in MENTION_PATTERN.finditer(content)})
     if not handles:
-        return
+        return 0
 
     rows = await conn.fetch(
         """
@@ -35,7 +35,7 @@ async def insert_mentions_for_message(
         channel_id,
     )
     if not rows:
-        return
+        return 0
 
     await conn.executemany(
         """
@@ -45,6 +45,7 @@ async def insert_mentions_for_message(
         """,
         [(message_id, row["userid"]) for row in rows],
     )
+    return len(rows)
 
 
 @me_mentions_router.get("/mentions", response_model=list[MentionOut])

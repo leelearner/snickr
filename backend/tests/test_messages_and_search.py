@@ -203,3 +203,70 @@ async def test_search_respects_membership(make_client, uid):
     assert {m["content"] for m in alice_hits} == {f"{needle} in public", f"{needle} in private"}
     # bob is only in the public channel; he must not see the private match.
     assert {m["content"] for m in bob_hits} == {f"{needle} in public"}
+
+
+async def test_thread_reply_round_trip(make_client, uid):
+    alice, bob, _, _, _, ch_id = await _two_member_channel(make_client, uid)
+    parent = (
+        await alice.post(f"/api/channels/{ch_id}/messages", json={"content": "ship plan"})
+    ).json()
+    reply_a = (
+        await bob.post(
+            f"/api/channels/{ch_id}/messages",
+            json={"content": "looks good", "parentMessageId": parent["messageId"]},
+        )
+    ).json()
+    reply_b = (
+        await alice.post(
+            f"/api/channels/{ch_id}/messages",
+            json={"content": "merging now", "parentMessageId": parent["messageId"]},
+        )
+    ).json()
+
+    assert reply_a["parentMessageId"] == parent["messageId"]
+    assert reply_b["parentMessageId"] == parent["messageId"]
+
+    timeline = (await alice.get(f"/api/channels/{ch_id}/messages")).json()
+    parent_in_list = next(m for m in timeline if m["messageId"] == parent["messageId"])
+    assert parent_in_list["replyCount"] == 2
+
+    replies = (
+        await alice.get(f"/api/channels/{ch_id}/messages/{parent['messageId']}/replies")
+    ).json()
+    assert [r["content"] for r in replies] == ["looks good", "merging now"]
+
+
+async def test_thread_parent_must_be_in_same_channel(make_client, uid):
+    alice, bob, _, _, ws_id, ch_a = await _two_member_channel(make_client, uid)
+    ch_b = (
+        await alice.post(
+            f"/api/workspaces/{ws_id}/channels",
+            json={"channelName": "second", "type": "public"},
+        )
+    ).json()["channelId"]
+    await bob.post(f"/api/channels/{ch_b}/join")
+
+    parent = (await alice.post(f"/api/channels/{ch_a}/messages", json={"content": "in A"})).json()
+    r = await alice.post(
+        f"/api/channels/{ch_b}/messages",
+        json={"content": "wrong channel", "parentMessageId": parent["messageId"]},
+    )
+    assert r.status_code == 400
+
+
+async def test_thread_replies_cascade_when_parent_deleted(make_client, uid):
+    alice, bob, _, _, _, ch_id = await _two_member_channel(make_client, uid)
+    parent = (
+        await alice.post(f"/api/channels/{ch_id}/messages", json={"content": "to delete"})
+    ).json()
+    await bob.post(
+        f"/api/channels/{ch_id}/messages",
+        json={"content": "reply", "parentMessageId": parent["messageId"]},
+    )
+
+    r = await alice.delete(f"/api/channels/{ch_id}/messages/{parent['messageId']}")
+    assert r.status_code == 204
+
+    timeline = (await alice.get(f"/api/channels/{ch_id}/messages")).json()
+    user_msgs = [m for m in timeline if not m.get("systemKind")]
+    assert user_msgs == []

@@ -25,4 +25,7 @@ export const messageApi = {
   listByUser(targetUserId: number) {
     return apiRequest<UserMessage[]>(`/api/users/${targetUserId}/messages`);
   },
+  listReplies(channelId: number, messageId: number) {
+    return apiRequest<MessageOut[]>(`/api/channels/${channelId}/messages/${messageId}/replies`);
+  },
 };

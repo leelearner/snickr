@@ -2,6 +2,7 @@ import asyncpg
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.api.v1.deps import current_user_id
+from app.core.logging import log_event
 from app.db.session import get_conn
 from app.schemas.channel import (
     ChannelCreate,
@@ -126,6 +127,14 @@ async def create_channel(
     if channel_id is None:
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail="not a member of this workspace")
 
+    log_event(
+        "channel.create",
+        uid=user_id,
+        workspaceId=workspace_id,
+        channelId=channel_id,
+        name=body.channelName,
+        type=body.type,
+    )
     return ChannelSummary(
         channelId=channel_id,
         channelName=body.channelName,
@@ -214,6 +223,13 @@ async def create_or_get_direct_message(
             user_id,
         )
 
+    log_event(
+        "channel.dm_open",
+        uid=user_id,
+        workspaceId=workspace_id,
+        channelId=channel_id,
+        partner=target["username"],
+    )
     return ChannelSummary(
         channelId=channel_id,
         channelName=channel_name,
@@ -303,6 +319,7 @@ async def leave_channel(
             channel_id,
             user_id,
         )
+        log_event("channel.dm_hide", uid=user_id, channelId=channel_id)
         return
     async with conn.transaction():
         await conn.execute(
@@ -318,6 +335,7 @@ async def leave_channel(
             channel_id,
             user_id,
         )
+    log_event("channel.leave", uid=user_id, channelId=channel_id)
 
 
 @channels_router.post("/{channel_id}/join")
@@ -375,6 +393,7 @@ async def join_channel(
                     join_msg_id,
                     creator_id,
                 )
+        log_event("channel.join", uid=user_id, channelId=channel_id, new=added is not None)
     return {"ok": True}
 
 
@@ -424,6 +443,13 @@ async def invite_to_channel(
     except asyncpg.UniqueViolationError:
         raise HTTPException(status.HTTP_409_CONFLICT, detail="invitation already exists")
 
+    log_event(
+        "channel.invite",
+        uid=user_id,
+        channelId=channel_id,
+        invitee=body.username,
+        invitationId=invitation_id,
+    )
     return {"invitationId": invitation_id}
 
 
@@ -503,4 +529,11 @@ async def respond_channel_invitation(
                 user_id,
             )
 
+    log_event(
+        "channel.invitation_response",
+        uid=user_id,
+        invitationId=invitation_id,
+        channelId=inv["channelid"],
+        status=new_status,
+    )
     return {"ok": True, "status": new_status}

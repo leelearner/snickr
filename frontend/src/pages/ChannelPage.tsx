@@ -14,6 +14,7 @@ import { InviteChannelUserDialog } from '../components/channels/InviteChannelUse
 import { JoinChannelButton } from '../components/channels/JoinChannelButton';
 import { MessageComposer } from '../components/messages/MessageComposer';
 import { MessageList } from '../components/messages/MessageList';
+import { ThreadPanel } from '../components/messages/ThreadPanel';
 import { queryKeys } from '../utils/queryKeys';
 
 export function ChannelPage() {
@@ -25,6 +26,7 @@ export function ChannelPage() {
   const { user } = useAuth();
   const [inviteOpen, setInviteOpen] = useState(false);
   const [membersPanelOpen, setMembersPanelOpen] = useState(false);
+  const [activeThreadId, setActiveThreadId] = useState<number | null>(null);
   const [leaveError, setLeaveError] = useState('');
   const leaveMutation = useMutation({
     mutationFn: () => channelApi.leave(numericChannelId),
@@ -144,6 +146,8 @@ export function ChannelPage() {
                 channelId={channel.channelId}
                 workspaceId={channel.workspaceId}
                 members={channel.members}
+                onOpenThread={(messageId) => setActiveThreadId(messageId)}
+                hideReplies
               />
             )}
           </div>
@@ -153,6 +157,16 @@ export function ChannelPage() {
             members={channel.members}
           />
         </div>
+        {activeThreadId != null && channel.isMember ? (
+          <ThreadPanel
+            channelId={channel.channelId}
+            workspaceId={channel.workspaceId}
+            parentMessageId={activeThreadId}
+            parent={(messagesQuery.data ?? []).find((m) => m.messageId === activeThreadId) ?? null}
+            members={channel.members}
+            onClose={() => setActiveThreadId(null)}
+          />
+        ) : null}
         {membersPanelOpen ? (
           <ChannelMembersPanel
             members={channel.members}

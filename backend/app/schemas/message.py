@@ -21,6 +21,7 @@ MessageContent = Annotated[
 
 class MessageCreate(BaseModel):
     content: MessageContent
+    parentMessageId: int | None = None
 
 
 class MessageUpdate(BaseModel):
@@ -33,6 +34,8 @@ class MessageOut(BaseModel):
     postedTime: datetime
     editedTime: datetime | None = None
     systemKind: str | None = None
+    parentMessageId: int | None = None
+    replyCount: int = 0
     postedBy: int
     postedByUsername: str
     postedByNickname: str | None = None
@@ -44,6 +47,8 @@ class MessageWithLocation(BaseModel):
     postedTime: datetime
     editedTime: datetime | None = None
     systemKind: str | None = None
+    parentMessageId: int | None = None
+    replyCount: int = 0
     workspaceId: int
     workspaceName: str
     channelId: int

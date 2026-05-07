@@ -84,6 +84,8 @@ export interface MessageOut {
   postedTime: string;
   editedTime: string | null;
   systemKind: SystemKind | null;
+  parentMessageId: number | null;
+  replyCount: number;
   postedBy: number;
   postedByUsername: string;
   postedByNickname: string | null;
@@ -95,6 +97,8 @@ export interface UserMessage {
   postedTime: string;
   editedTime: string | null;
   systemKind: SystemKind | null;
+  parentMessageId: number | null;
+  replyCount: number;
   workspaceId: number;
   workspaceName: string;
   channelId: number;
@@ -199,4 +203,5 @@ export interface DirectMessageCreatePayload {
 
 export interface MessageCreatePayload {
   content: string;
+  parentMessageId?: number | null;
 }

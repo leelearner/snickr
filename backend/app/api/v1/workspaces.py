@@ -2,6 +2,7 @@ import asyncpg
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.api.v1.deps import current_user_id
+from app.core.logging import log_event
 from app.db.session import get_conn
 from app.schemas.workspace import (
     AdminEntry,
@@ -36,6 +37,7 @@ async def _require_admin(conn: asyncpg.Connection, user_id: int, workspace_id: i
         user_id,
     )
     if not is_admin:
+        log_event("workspace.admin_denied", uid=user_id, workspaceId=workspace_id)
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail="admin role required")
 
 
@@ -99,6 +101,7 @@ async def create_workspace(
             raise HTTPException(
                 status.HTTP_500_INTERNAL_SERVER_ERROR, detail="failed to create default channel"
             )
+    log_event("workspace.create", uid=user_id, workspaceId=ws_id, name=body.name)
     return WorkspaceSummary(
         workspaceId=ws_id,
         name=body.name,
@@ -223,6 +226,13 @@ async def invite_to_workspace(
     if invitation_id is None:
         raise HTTPException(status.HTTP_409_CONFLICT, detail="invitation already exists")
 
+    log_event(
+        "workspace.invite",
+        uid=user_id,
+        workspaceId=workspace_id,
+        invitee=body.username,
+        invitationId=invitation_id,
+    )
     return {"invitationId": invitation_id}
 
 
@@ -282,6 +292,7 @@ async def delete_workspace(
     result = await conn.execute("DELETE FROM workspaces WHERE workspaceID = $1", workspace_id)
     if result == "DELETE 0":
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="workspace not found")
+    log_event("workspace.disband", uid=user_id, workspaceId=workspace_id)
 
 
 @router.delete("/{workspace_id}/members/{target_user_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -316,6 +327,13 @@ async def remove_member(
             if is_self
             else "cannot remove the last admin"
         )
+        log_event(
+            "workspace.last_admin_guard",
+            uid=user_id,
+            workspaceId=workspace_id,
+            target=target_user_id,
+            action="remove",
+        )
         raise HTTPException(status.HTTP_409_CONFLICT, detail=detail)
 
     async with conn.transaction():
@@ -333,6 +351,13 @@ async def remove_member(
             workspace_id,
             target_user_id,
         )
+    log_event(
+        "workspace.remove_member",
+        uid=user_id,
+        workspaceId=workspace_id,
+        target=target_user_id,
+        self=is_self,
+    )
 
 
 @router.patch("/{workspace_id}/members/{target_user_id}/role")
@@ -363,6 +388,13 @@ async def change_member_role(
         return {"ok": True, "role": body.role}
 
     if current == "admin" and body.role == "member" and await _admin_count(conn, workspace_id) == 1:
+        log_event(
+            "workspace.last_admin_guard",
+            uid=user_id,
+            workspaceId=workspace_id,
+            target=target_user_id,
+            action="demote",
+        )
         raise HTTPException(status.HTTP_409_CONFLICT, detail="cannot demote the last admin")
 
     await conn.execute(
@@ -374,6 +406,13 @@ async def change_member_role(
         body.role,
         workspace_id,
         target_user_id,
+    )
+    log_event(
+        "workspace.role_change",
+        uid=user_id,
+        workspaceId=workspace_id,
+        target=target_user_id,
+        role=body.role,
     )
     return {"ok": True, "role": body.role}
 
@@ -422,6 +461,12 @@ async def respond_workspace_invitation(
             raise HTTPException(status.HTTP_409_CONFLICT, detail=str(e))
         if workspace_id is None:
             raise HTTPException(status.HTTP_404_NOT_FOUND, detail="invitation not found")
+        log_event(
+            "workspace.invitation_accept",
+            uid=user_id,
+            invitationId=invitation_id,
+            workspaceId=workspace_id,
+        )
         return {"ok": True, "status": "accepted"}
 
     async with conn.transaction():
@@ -451,4 +496,5 @@ async def respond_workspace_invitation(
             """,
             invitation_id,
         )
+    log_event("workspace.invitation_decline", uid=user_id, invitationId=invitation_id)
     return {"ok": True, "status": "declined"}

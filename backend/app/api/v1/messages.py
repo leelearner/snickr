@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Path, status
 
 from app.api.v1.deps import current_user_id
 from app.api.v1.mentions import insert_mentions_for_message
+from app.core.logging import log_event
 from app.db.session import get_conn
 from app.schemas.message import MessageCreate, MessageOut, MessageUpdate, MessageWithLocation
 
@@ -37,20 +38,65 @@ async def list_channel_messages(
 
     rows = await conn.fetch(
         """
-        SELECT m.messageID    AS "messageId",
+        SELECT m.messageID         AS "messageId",
                m.content,
-               m.posted_time  AS "postedTime",
-               m.edited_time  AS "editedTime",
-               m.system_kind  AS "systemKind",
-               u.userID       AS "postedBy",
-               u.username     AS "postedByUsername",
-               u.nickname     AS "postedByNickname"
+               m.posted_time       AS "postedTime",
+               m.edited_time       AS "editedTime",
+               m.system_kind       AS "systemKind",
+               m.parent_messageID  AS "parentMessageId",
+               (SELECT COUNT(*) FROM messages r
+                  WHERE r.parent_messageID = m.messageID) AS "replyCount",
+               u.userID            AS "postedBy",
+               u.username          AS "postedByUsername",
+               u.nickname          AS "postedByNickname"
           FROM messages m
           JOIN users    u ON u.userID = m.posted_by
          WHERE m.channelID = $1
          ORDER BY m.posted_time ASC, m.messageID ASC
         """,
         channel_id,
+    )
+    return [MessageOut(**dict(r)) for r in rows]
+
+
+@channel_msgs_router.get(
+    "/{channel_id}/messages/{message_id}/replies",
+    response_model=list[MessageOut],
+)
+async def list_thread_replies(
+    channel_id: DbId,
+    message_id: DbId,
+    user_id: int = Depends(current_user_id),
+    conn: asyncpg.Connection = Depends(get_conn),
+) -> list[MessageOut]:
+    if not await _is_channel_member(conn, user_id, channel_id):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="channel not found")
+
+    parent = await conn.fetchrow(
+        "SELECT channelID FROM messages WHERE messageID = $1",
+        message_id,
+    )
+    if parent is None or parent["channelid"] != channel_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="message not found")
+
+    rows = await conn.fetch(
+        """
+        SELECT m.messageID         AS "messageId",
+               m.content,
+               m.posted_time       AS "postedTime",
+               m.edited_time       AS "editedTime",
+               m.system_kind       AS "systemKind",
+               m.parent_messageID  AS "parentMessageId",
+               0                   AS "replyCount",
+               u.userID            AS "postedBy",
+               u.username          AS "postedByUsername",
+               u.nickname          AS "postedByNickname"
+          FROM messages m
+          JOIN users    u ON u.userID = m.posted_by
+         WHERE m.parent_messageID = $1
+         ORDER BY m.posted_time ASC, m.messageID ASC
+        """,
+        message_id,
     )
     return [MessageOut(**dict(r)) for r in rows]
 
@@ -69,30 +115,54 @@ async def post_channel_message(
     if not await _is_channel_member(conn, user_id, channel_id):
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail="not a member of this channel")
 
+    if body.parentMessageId is not None:
+        parent = await conn.fetchrow(
+            "SELECT channelID, system_kind FROM messages WHERE messageID = $1",
+            body.parentMessageId,
+        )
+        if parent is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, detail="parent message not found")
+        if parent["channelid"] != channel_id:
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                detail="parent message must be in the same channel",
+            )
+        if parent["system_kind"] is not None:
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                detail="cannot reply to a system message",
+            )
+
     async with conn.transaction():
         row = await conn.fetchrow(
             """
             WITH inserted AS (
-                INSERT INTO messages (channelID, content, posted_time, posted_by)
-                VALUES ($1, $2, timezone('America/New_York', NOW()), $3)
-                RETURNING messageID, content, posted_time, edited_time, system_kind, posted_by
+                INSERT INTO messages (channelID, content, posted_time, posted_by, parent_messageID)
+                VALUES ($1, $2, timezone('America/New_York', NOW()), $3, $4)
+                RETURNING messageID, content, posted_time, edited_time, system_kind,
+                          posted_by, parent_messageID
             )
-            SELECT i.messageID    AS "messageId",
+            SELECT i.messageID         AS "messageId",
                    i.content,
-                   i.posted_time  AS "postedTime",
-                   i.edited_time  AS "editedTime",
-                   i.system_kind  AS "systemKind",
-                   u.userID       AS "postedBy",
-                   u.username     AS "postedByUsername",
-                   u.nickname     AS "postedByNickname"
+                   i.posted_time       AS "postedTime",
+                   i.edited_time       AS "editedTime",
+                   i.system_kind       AS "systemKind",
+                   i.parent_messageID  AS "parentMessageId",
+                   0                   AS "replyCount",
+                   u.userID            AS "postedBy",
+                   u.username          AS "postedByUsername",
+                   u.nickname          AS "postedByNickname"
               FROM inserted i
               JOIN users u ON u.userID = i.posted_by
             """,
             channel_id,
             body.content,
             user_id,
+            body.parentMessageId,
         )
-        await insert_mentions_for_message(conn, row["messageId"], channel_id, body.content)
+        mention_count = await insert_mentions_for_message(
+            conn, row["messageId"], channel_id, body.content
+        )
 
         # In direct-message channels every new message is implicitly a notification
         # to the other participant, so we add a mention row to surface it in the Inbox.
@@ -129,6 +199,14 @@ async def post_channel_message(
             channel_id,
             user_id,
         )
+    log_event(
+        "message.post",
+        uid=user_id,
+        channelId=channel_id,
+        messageId=row["messageId"],
+        mentions=mention_count,
+        length=len(body.content),
+    )
     return MessageOut(**dict(row))
 
 
@@ -168,16 +246,20 @@ async def edit_channel_message(
                    SET content     = $1,
                        edited_time = timezone('America/New_York', NOW())
                  WHERE messageID = $2
-                RETURNING messageID, content, posted_time, edited_time, system_kind, posted_by
+                RETURNING messageID, content, posted_time, edited_time, system_kind,
+                          posted_by, parent_messageID
             )
-            SELECT u_msg.messageID    AS "messageId",
+            SELECT u_msg.messageID         AS "messageId",
                    u_msg.content,
-                   u_msg.posted_time  AS "postedTime",
-                   u_msg.edited_time  AS "editedTime",
-                   u_msg.system_kind  AS "systemKind",
-                   u.userID           AS "postedBy",
-                   u.username         AS "postedByUsername",
-                   u.nickname         AS "postedByNickname"
+                   u_msg.posted_time       AS "postedTime",
+                   u_msg.edited_time       AS "editedTime",
+                   u_msg.system_kind       AS "systemKind",
+                   u_msg.parent_messageID  AS "parentMessageId",
+                   (SELECT COUNT(*) FROM messages r
+                      WHERE r.parent_messageID = u_msg.messageID) AS "replyCount",
+                   u.userID                AS "postedBy",
+                   u.username              AS "postedByUsername",
+                   u.nickname              AS "postedByNickname"
               FROM updated u_msg
               JOIN users   u ON u.userID = u_msg.posted_by
             """,
@@ -186,8 +268,17 @@ async def edit_channel_message(
         )
 
         await conn.execute("DELETE FROM mentions WHERE messageID = $1", message_id)
-        await insert_mentions_for_message(conn, message_id, channel_id, body.content)
+        mention_count = await insert_mentions_for_message(
+            conn, message_id, channel_id, body.content
+        )
 
+    log_event(
+        "message.edit",
+        uid=user_id,
+        channelId=channel_id,
+        messageId=message_id,
+        mentions=mention_count,
+    )
     return MessageOut(**dict(row))
 
 
@@ -219,6 +310,12 @@ async def delete_channel_message(
         )
 
     await conn.execute("DELETE FROM messages WHERE messageID = $1", message_id)
+    log_event(
+        "message.delete",
+        uid=user_id,
+        channelId=channel_id,
+        messageId=message_id,
+    )
 
 
 @user_msgs_router.get("/{target_user_id}/messages", response_model=list[MessageWithLocation])
@@ -229,18 +326,21 @@ async def list_user_messages(
 ) -> list[MessageWithLocation]:
     rows = await conn.fetch(
         """
-        SELECT m.messageID    AS "messageId",
+        SELECT m.messageID         AS "messageId",
                m.content,
-               m.posted_time  AS "postedTime",
-               m.edited_time  AS "editedTime",
-               m.system_kind  AS "systemKind",
-               w.workspaceID  AS "workspaceId",
-               w.name         AS "workspaceName",
-               c.channelID    AS "channelId",
-               c.channel_name AS "channelName",
-               u.userID       AS "postedBy",
-               u.username     AS "postedByUsername",
-               u.nickname     AS "postedByNickname"
+               m.posted_time       AS "postedTime",
+               m.edited_time       AS "editedTime",
+               m.system_kind       AS "systemKind",
+               m.parent_messageID  AS "parentMessageId",
+               (SELECT COUNT(*) FROM messages r
+                  WHERE r.parent_messageID = m.messageID) AS "replyCount",
+               w.workspaceID       AS "workspaceId",
+               w.name              AS "workspaceName",
+               c.channelID         AS "channelId",
+               c.channel_name      AS "channelName",
+               u.userID            AS "postedBy",
+               u.username          AS "postedByUsername",
+               u.nickname          AS "postedByNickname"
           FROM messages   m
           JOIN channels   c ON c.channelID   = m.channelID
           JOIN workspaces w ON w.workspaceID = c.workspaceID
@@ -264,18 +364,21 @@ async def search_messages(
     pattern = f"%{q}%"
     rows = await conn.fetch(
         """
-        SELECT m.messageID    AS "messageId",
+        SELECT m.messageID         AS "messageId",
                m.content,
-               m.posted_time  AS "postedTime",
-               m.edited_time  AS "editedTime",
-               m.system_kind  AS "systemKind",
-               w.workspaceID  AS "workspaceId",
-               w.name         AS "workspaceName",
-               c.channelID    AS "channelId",
-               c.channel_name AS "channelName",
-               u.userID       AS "postedBy",
-               u.username     AS "postedByUsername",
-               u.nickname     AS "postedByNickname"
+               m.posted_time       AS "postedTime",
+               m.edited_time       AS "editedTime",
+               m.system_kind       AS "systemKind",
+               m.parent_messageID  AS "parentMessageId",
+               (SELECT COUNT(*) FROM messages r
+                  WHERE r.parent_messageID = m.messageID) AS "replyCount",
+               w.workspaceID       AS "workspaceId",
+               w.name              AS "workspaceName",
+               c.channelID         AS "channelId",
+               c.channel_name      AS "channelName",
+               u.userID            AS "postedBy",
+               u.username          AS "postedByUsername",
+               u.nickname          AS "postedByNickname"
           FROM messages        m
           JOIN channels        c  ON c.channelID    = m.channelID
           JOIN workspaces      w  ON w.workspaceID  = c.workspaceID
@@ -288,4 +391,5 @@ async def search_messages(
         user_id,
         pattern,
     )
+    log_event("search", uid=user_id, q=q, hits=len(rows))
     return [MessageWithLocation(**dict(r)) for r in rows]

@@ -1,4 +1,7 @@
-from fastapi import Depends, FastAPI
+import logging
+import time
+
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 import asyncpg
@@ -9,9 +12,34 @@ from app.api.v1 import mentions as mentions_router
 from app.api.v1 import messages as messages_router
 from app.api.v1 import workspaces as workspaces_router
 from app.core.config import settings
+from app.core.logging import setup_logging
 from app.db.session import get_conn, lifespan
 
+setup_logging()
+_http_logger = logging.getLogger("snickr.http")
+
 app = FastAPI(title="Snickr API", version="0.1.0", lifespan=lifespan)
+
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    start = time.perf_counter()
+    response = await call_next(request)
+    elapsed_ms = int((time.perf_counter() - start) * 1000)
+    try:
+        uid = request.session.get("user_id", "-")
+    except Exception:
+        uid = "-"
+    _http_logger.info(
+        "%s %s %d uid=%s %dms",
+        request.method,
+        request.url.path,
+        response.status_code,
+        uid,
+        elapsed_ms,
+    )
+    return response
+
 
 app.add_middleware(
     CORSMiddleware,

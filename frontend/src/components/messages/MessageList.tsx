@@ -20,19 +20,26 @@ export function MessageList({
   channelId,
   workspaceId,
   members,
+  onOpenThread,
+  hideThreadActions = false,
+  hideReplies = false,
 }: {
   messages: MessageOut[];
   channelId: number;
   workspaceId?: number;
   members?: ChannelMember[];
+  onOpenThread?: (messageId: number) => void;
+  hideThreadActions?: boolean;
+  hideReplies?: boolean;
 }) {
+  const visible = hideReplies ? messages.filter((m) => m.parentMessageId == null) : messages;
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: 'end' });
-  }, [messages.length]);
+  }, [visible.length]);
 
-  if (messages.length === 0) {
+  if (visible.length === 0) {
     return (
       <div className="p-5">
         <EmptyState
@@ -45,8 +52,8 @@ export function MessageList({
 
   return (
     <div className="py-3">
-      {messages.map((message, index) => {
-        const previous = index > 0 ? messages[index - 1] : null;
+      {visible.map((message, index) => {
+        const previous = index > 0 ? visible[index - 1] : null;
         const newDay = !previous || dateKey(previous.postedTime) !== dateKey(message.postedTime);
         const compact = !newDay && previous ? shouldGroupWithPrevious(previous, message) : false;
         return (
@@ -66,6 +73,8 @@ export function MessageList({
               workspaceId={workspaceId}
               members={members}
               compact={compact}
+              onOpenThread={onOpenThread}
+              hideThreadActions={hideThreadActions}
             />
           </Fragment>
         );

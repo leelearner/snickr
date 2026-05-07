@@ -16,10 +16,14 @@ export function MessageComposer({
   channelId,
   disabled = false,
   members = [],
+  parentMessageId,
+  placeholder,
 }: {
   channelId: number;
   disabled?: boolean;
   members?: ChannelMember[];
+  parentMessageId?: number;
+  placeholder?: string;
 }) {
   const [content, setContent] = useState('');
   const [validation, setValidation] = useState('');
@@ -28,11 +32,17 @@ export function MessageComposer({
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const queryClient = useQueryClient();
   const mutation = useMutation({
-    mutationFn: (trimmed: string) => messageApi.create(channelId, { content: trimmed }),
+    mutationFn: (trimmed: string) =>
+      messageApi.create(channelId, { content: trimmed, parentMessageId }),
     onSuccess: async () => {
       setContent('');
       setCursor(0);
       await queryClient.invalidateQueries({ queryKey: queryKeys.messages(channelId) });
+      if (parentMessageId != null) {
+        await queryClient.invalidateQueries({
+          queryKey: queryKeys.replies(channelId, parentMessageId),
+        });
+      }
     },
   });
 
@@ -169,7 +179,7 @@ export function MessageComposer({
         <textarea
           ref={textareaRef}
           className="max-h-40 min-h-9 flex-1 resize-none border-0 bg-transparent text-sm leading-6 outline-none placeholder:text-slate-400 disabled:cursor-not-allowed"
-          placeholder={disabled ? 'Join the channel before posting.' : 'Message'}
+          placeholder={disabled ? 'Join the channel before posting.' : (placeholder ?? 'Message')}
           value={content}
           maxLength={MAX_LENGTH}
           disabled={disabled || mutation.isPending}

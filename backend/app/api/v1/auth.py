@@ -2,6 +2,7 @@ import asyncpg
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 from app.api.v1.deps import current_user_id
+from app.core.logging import log_event
 from app.core.security import hash_password, verify_password
 from app.db.session import get_conn
 from app.schemas.user import ProfileUpdate, UserLogin, UserOut, UserRegister
@@ -34,9 +35,11 @@ async def register(
             pw_hash,
         )
     except asyncpg.UniqueViolationError:
+        log_event("auth.register_conflict", username=body.username, email=body.email)
         raise HTTPException(status.HTTP_409_CONFLICT, detail="email or username already in use")
 
     request.session["user_id"] = row["userId"]
+    log_event("auth.register", uid=row["userId"], username=row["username"])
     return UserOut(**dict(row))
 
 
@@ -60,9 +63,11 @@ async def login(
     )
     # Same error message for unknown-user and bad-password to avoid leaking which usernames exist.
     if row is None or not verify_password(body.password, row["passwordHash"]):
+        log_event("auth.login_denied", username=body.username)
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="invalid credentials")
 
     request.session["user_id"] = row["userId"]
+    log_event("auth.login", uid=row["userId"], username=row["username"])
     return UserOut(
         userId=row["userId"],
         email=row["email"],
@@ -73,7 +78,9 @@ async def login(
 
 @router.post("/logout")
 async def logout(request: Request) -> dict:
+    uid = request.session.get("user_id")
     request.session.clear()
+    log_event("auth.logout", uid=uid)
     return {"ok": True}
 
 

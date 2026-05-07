@@ -1,5 +1,5 @@
 import { KeyboardEvent, forwardRef, useEffect, useRef, useState } from 'react';
-import { LogIn, LogOut, Pencil, Trash2 } from 'lucide-react';
+import { LogIn, LogOut, MessageSquare, Pencil, Trash2 } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { ChannelMember, MessageOut } from '../../types/api';
 import { messageApi } from '../../api/messages';
@@ -16,6 +16,8 @@ interface MessageItemProps {
   workspaceId?: number;
   members?: ChannelMember[];
   compact?: boolean;
+  onOpenThread?: (messageId: number) => void;
+  hideThreadActions?: boolean;
 }
 
 export function MessageItem({
@@ -24,6 +26,8 @@ export function MessageItem({
   workspaceId,
   members,
   compact = false,
+  onOpenThread,
+  hideThreadActions = false,
 }: MessageItemProps) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -107,27 +111,55 @@ export function MessageItem({
     <span className="ml-1 text-xs text-slate-400">(edited)</span>
   ) : null;
 
+  const showThreadButton = !isSystem && !hideThreadActions && onOpenThread != null;
+  const showOwnerActions = isMine && !editing;
   const actions =
-    isMine && !editing ? (
+    !editing && (showThreadButton || showOwnerActions) ? (
       <div className="absolute right-3 top-1.5 hidden gap-0.5 rounded-md border border-slate-200 bg-white p-0.5 shadow-sm group-hover:flex">
-        <button
-          type="button"
-          onClick={startEdit}
-          className="flex h-6 w-6 items-center justify-center rounded text-slate-500 hover:bg-slate-100 hover:text-slate-800"
-          title="Edit message"
-        >
-          <Pencil className="h-3.5 w-3.5" />
-        </button>
-        <button
-          type="button"
-          onClick={confirmDelete}
-          disabled={deleteMutation.isPending}
-          className="flex h-6 w-6 items-center justify-center rounded text-slate-500 hover:bg-red-50 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
-          title="Delete message"
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </button>
+        {showThreadButton ? (
+          <button
+            type="button"
+            onClick={() => onOpenThread?.(message.parentMessageId ?? message.messageId)}
+            className="flex h-6 w-6 items-center justify-center rounded text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+            title="Reply in thread"
+          >
+            <MessageSquare className="h-3.5 w-3.5" />
+          </button>
+        ) : null}
+        {showOwnerActions ? (
+          <>
+            <button
+              type="button"
+              onClick={startEdit}
+              className="flex h-6 w-6 items-center justify-center rounded text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+              title="Edit message"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={confirmDelete}
+              disabled={deleteMutation.isPending}
+              className="flex h-6 w-6 items-center justify-center rounded text-slate-500 hover:bg-red-50 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+              title="Delete message"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          </>
+        ) : null}
       </div>
+    ) : null;
+
+  const replyCountBadge =
+    !hideThreadActions && message.replyCount > 0 && onOpenThread ? (
+      <button
+        type="button"
+        onClick={() => onOpenThread(message.messageId)}
+        className="mt-1 inline-flex items-center gap-1 rounded-md border border-slate-200 px-2 py-0.5 text-xs font-medium text-blue-700 hover:bg-blue-50"
+      >
+        <MessageSquare className="h-3 w-3" />
+        {message.replyCount} {message.replyCount === 1 ? 'reply' : 'replies'}
+      </button>
     ) : null;
 
   const editView = (
@@ -171,6 +203,7 @@ export function MessageItem({
               {editedSuffix}
             </p>
           )}
+          {replyCountBadge}
           {actionError ? <p className="mt-1 text-xs text-red-600">{actionError}</p> : null}
         </div>
         {actions}
@@ -190,10 +223,11 @@ export function MessageItem({
           editView
         ) : (
           <p className="mt-0.5 whitespace-pre-wrap break-words text-sm leading-6 text-slate-800">
-            {renderMessageContent(message.content)}
+            {renderMessageContent(message.content, { members, fromWorkspaceId: workspaceId })}
             {editedSuffix}
           </p>
         )}
+        {replyCountBadge}
         {actionError ? <p className="mt-1 text-xs text-red-600">{actionError}</p> : null}
       </div>
       {actions}
