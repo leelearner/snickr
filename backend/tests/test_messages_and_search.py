@@ -62,6 +62,23 @@ async def test_user_messages_list(make_client, uid):
     assert "another one" in contents
 
 
+async def test_invalid_message_inputs_return_validation_errors(make_client, uid):
+    alice, _, _, _, _, ch_id = await _two_member_channel(make_client, uid)
+    huge_id = 9223372036854775807
+
+    r = await alice.get(f"/api/channels/{huge_id}/messages")
+    assert r.status_code == 422
+    assert "detail" in r.json()
+
+    r = await alice.get(f"/api/users/{huge_id}/messages")
+    assert r.status_code == 422
+    assert "detail" in r.json()
+
+    r = await alice.post(f"/api/channels/{ch_id}/messages", json={"content": "hello\x00world"})
+    assert r.status_code == 422
+    assert "detail" in r.json()
+
+
 async def test_owner_can_edit_message(make_client, uid):
     alice, _, _, _, _, ch_id = await _two_member_channel(make_client, uid)
     posted = (await alice.post(f"/api/channels/{ch_id}/messages",

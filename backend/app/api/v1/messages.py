@@ -1,5 +1,7 @@
+from typing import Annotated
+
 import asyncpg
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Path, status
 
 from app.api.v1.deps import current_user_id
 from app.api.v1.mentions import insert_mentions_for_message
@@ -11,6 +13,8 @@ channel_msgs_router = APIRouter(prefix="/api/channels", tags=["messages"])
 user_msgs_router = APIRouter(prefix="/api/users", tags=["messages"])
 search_router = APIRouter(prefix="/api/search", tags=["search"])
 
+DbId = Annotated[int, Path(ge=1, le=2_147_483_647)]
+
 
 async def _is_channel_member(conn: asyncpg.Connection, user_id: int, channel_id: int) -> bool:
     return bool(await conn.fetchval(
@@ -21,7 +25,7 @@ async def _is_channel_member(conn: asyncpg.Connection, user_id: int, channel_id:
 
 @channel_msgs_router.get("/{channel_id}/messages", response_model=list[MessageOut])
 async def list_channel_messages(
-    channel_id: int,
+    channel_id: DbId,
     user_id: int = Depends(current_user_id),
     conn: asyncpg.Connection = Depends(get_conn),
 ) -> list[MessageOut]:
@@ -54,7 +58,7 @@ async def list_channel_messages(
     response_model=MessageOut,
 )
 async def post_channel_message(
-    channel_id: int,
+    channel_id: DbId,
     body: MessageCreate,
     user_id: int = Depends(current_user_id),
     conn: asyncpg.Connection = Depends(get_conn),
@@ -125,8 +129,8 @@ async def post_channel_message(
     response_model=MessageOut,
 )
 async def edit_channel_message(
-    channel_id: int,
-    message_id: int,
+    channel_id: DbId,
+    message_id: DbId,
     body: MessageUpdate,
     user_id: int = Depends(current_user_id),
     conn: asyncpg.Connection = Depends(get_conn),
@@ -181,8 +185,8 @@ async def edit_channel_message(
     status_code=status.HTTP_204_NO_CONTENT,
 )
 async def delete_channel_message(
-    channel_id: int,
-    message_id: int,
+    channel_id: DbId,
+    message_id: DbId,
     user_id: int = Depends(current_user_id),
     conn: asyncpg.Connection = Depends(get_conn),
 ) -> None:
@@ -206,7 +210,7 @@ async def delete_channel_message(
 
 @user_msgs_router.get("/{target_user_id}/messages", response_model=list[MessageWithLocation])
 async def list_user_messages(
-    target_user_id: int,
+    target_user_id: DbId,
     _: int = Depends(current_user_id),
     conn: asyncpg.Connection = Depends(get_conn),
 ) -> list[MessageWithLocation]:
