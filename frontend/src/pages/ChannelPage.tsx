@@ -6,6 +6,7 @@ import { channelApi } from "../api/channels";
 import { messageApi } from "../api/messages";
 import { useAuth } from "../context/AuthContext";
 import { errorMessage } from "../utils/format";
+import { displayName as safeDisplayName } from "../utils/displayName";
 import { ErrorState } from "../components/common/ErrorState";
 import { LoadingSpinner } from "../components/common/LoadingSpinner";
 import { ChannelMembersPanel } from "../components/channels/ChannelMembersPanel";
@@ -53,7 +54,7 @@ export function ChannelPage() {
   const directPeer = channel.members.find((member) => member.userId !== user?.userId);
   const headerName =
     channel.type === "direct"
-      ? directPeer?.nickname ?? directPeer?.username ?? "Direct message"
+      ? directPeer ? safeDisplayName(directPeer.nickname, directPeer.username) : "Direct message"
       : channel.channelName;
 
   const HeaderIcon = channel.type === "private" ? Lock : channel.type === "direct" ? MessageSquare : Hash;

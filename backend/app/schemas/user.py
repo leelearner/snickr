@@ -4,8 +4,19 @@ from typing import Annotated
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, StringConstraints
 
 
-Username = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=30)]
-Nickname = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=30)]
+# Usernames are restricted to letters, digits, underscore, and period. This
+# keeps them URL-safe, blocks angle brackets and other HTML-looking junk, and
+# matches what the @-mention parser is willing to address.
+Username = Annotated[
+    str,
+    StringConstraints(strip_whitespace=True, min_length=1, max_length=30, pattern=r"^[A-Za-z0-9_.]+$"),
+]
+# Nicknames are free-form display names but cannot contain angle brackets, so
+# users can't register with HTML-looking values like <img onerror=...>.
+Nickname = Annotated[
+    str,
+    StringConstraints(strip_whitespace=True, min_length=1, max_length=30, pattern=r"^[^<>]+$"),
+]
 
 
 class UserRegister(BaseModel):

@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useMemo } from "react";
+import { ReactNode, useMemo, useState } from "react";
 import { AtSign, Check, Hash, Inbox, LayoutGrid, LogIn, MessageSquare, type LucideIcon } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { channelApi } from "../api/channels";
@@ -12,7 +12,7 @@ import { ChannelInvitationCard } from "../components/invitations/ChannelInvitati
 import { MentionCard } from "../components/invitations/MentionCard";
 import { WorkspaceInvitationCard } from "../components/invitations/WorkspaceInvitationCard";
 import { queryKeys } from "../utils/queryKeys";
-import { markInboxSeen } from "../utils/inboxSeen";
+import { markInboxSeen, readInboxLastSeen } from "../utils/inboxSeen";
 
 function SectionHeader({ icon: Icon, children }: { icon: LucideIcon; children: ReactNode }) {
   return (
@@ -37,9 +37,18 @@ export function InvitationsPage() {
     queryFn: mentionsApi.list,
   });
 
-  useEffect(() => {
+  // Snapshot lastSeen at first render so unread highlights do not flicker to
+  // read just because the user happened to open the Inbox; bump the snapshot
+  // only when the user explicitly hits "Mark all as read".
+  const [seenAtOpen, setSeenAtOpen] = useState(() => readInboxLastSeen());
+  const isUnread = (postedTime: string) => {
+    const t = new Date(postedTime).getTime();
+    return Number.isFinite(t) && t > seenAtOpen;
+  };
+  function handleMarkAllRead() {
     markInboxSeen();
-  }, []);
+    setSeenAtOpen(Date.now());
+  }
 
   const grouped = useMemo(() => {
     const data = mentions.data ?? [];
@@ -81,7 +90,7 @@ export function InvitationsPage() {
         {notificationCount > 0 ? (
           <button
             type="button"
-            onClick={markInboxSeen}
+            onClick={handleMarkAllRead}
             className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50"
           >
             <Check className="h-3.5 w-3.5" />
@@ -122,7 +131,7 @@ export function InvitationsPage() {
             <SectionHeader icon={AtSign}>Mentions</SectionHeader>
             <div className="space-y-2">
               {grouped.mentions.map((mention) => (
-                <MentionCard key={mention.mentionId} mention={mention} />
+                <MentionCard key={mention.mentionId} mention={mention} unread={isUnread(mention.postedTime)} />
               ))}
             </div>
           </section>
@@ -132,7 +141,7 @@ export function InvitationsPage() {
             <SectionHeader icon={MessageSquare}>Direct messages</SectionHeader>
             <div className="space-y-2">
               {grouped.dms.map((mention) => (
-                <MentionCard key={mention.mentionId} mention={mention} />
+                <MentionCard key={mention.mentionId} mention={mention} unread={isUnread(mention.postedTime)} />
               ))}
             </div>
           </section>
@@ -142,7 +151,7 @@ export function InvitationsPage() {
             <SectionHeader icon={LogIn}>Channel joins</SectionHeader>
             <div className="space-y-2">
               {grouped.joins.map((mention) => (
-                <MentionCard key={mention.mentionId} mention={mention} />
+                <MentionCard key={mention.mentionId} mention={mention} unread={isUnread(mention.postedTime)} />
               ))}
             </div>
           </section>

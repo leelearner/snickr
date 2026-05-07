@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { MessageSquare, Trash2 } from "lucide-react";
 import type { WorkspaceMember } from "../../types/api";
 import { formatDate } from "../../utils/format";
+import { displayName as safeDisplayName } from "../../utils/displayName";
 import { queryKeys } from "../../utils/queryKeys";
 import { channelApi } from "../../api/channels";
 import { workspaceApi } from "../../api/workspaces";
@@ -50,14 +51,14 @@ export function MemberRow({
   return (
     <div className="group grid grid-cols-[1fr_auto] gap-4 px-1 py-2.5 transition hover:bg-slate-50">
       <div className="flex min-w-0 items-center gap-3">
-        <Avatar name={member.nickname ?? member.username} className="h-9 w-9" />
+        <Avatar name={safeDisplayName(member.nickname, member.username)} className="h-9 w-9" />
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <Link
               className="truncate text-sm font-semibold text-slate-950 hover:underline"
               to={`/app/users/${member.userId}/messages`}
             >
-              {member.nickname ?? member.username}
+              {safeDisplayName(member.nickname, member.username)}
             </Link>
             {member.role === "admin" ? <Badge tone="blue">admin</Badge> : null}
             {isSelf ? <span className="text-xs text-slate-400">(you)</span> : null}

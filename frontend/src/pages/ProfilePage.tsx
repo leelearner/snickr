@@ -11,6 +11,7 @@ import { PasswordStrength } from "../components/common/PasswordStrength";
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 import { MainContent } from "../components/layout/MainContent";
 import { errorMessage } from "../utils/format";
+import { displayName as safeDisplayName } from "../utils/displayName";
 import { queryKeys } from "../utils/queryKeys";
 
 export function ProfilePage() {
@@ -85,7 +86,7 @@ export function ProfilePage() {
     passwordMutation.mutate({ currentPassword, newPassword });
   }
 
-  const displayName = user?.nickname ?? user?.username ?? "";
+  const displayName = safeDisplayName(user?.nickname, user?.username);
 
   return (
     <MainContent>

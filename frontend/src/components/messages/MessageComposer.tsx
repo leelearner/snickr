@@ -3,6 +3,7 @@ import { Send } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { messageApi } from "../../api/messages";
 import { errorMessage } from "../../utils/format";
+import { displayName as safeDisplayName } from "../../utils/displayName";
 import { queryKeys } from "../../utils/queryKeys";
 import type { ChannelMember } from "../../types/api";
 import { Avatar } from "../common/Avatar";
@@ -149,8 +150,8 @@ export function MessageComposer({
                     index === activeIndex ? "bg-slate-100" : "bg-white hover:bg-slate-50"
                   }`}
                 >
-                  <Avatar name={member.nickname ?? member.username} className="h-6 w-6 text-xs" />
-                  <span className="font-medium text-slate-800">{member.nickname ?? member.username}</span>
+                  <Avatar name={safeDisplayName(member.nickname, member.username)} className="h-6 w-6 text-xs" />
+                  <span className="font-medium text-slate-800">{safeDisplayName(member.nickname, member.username)}</span>
                   <span className="text-xs text-slate-500">@{member.username}</span>
                 </button>
               </li>

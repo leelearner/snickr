@@ -5,6 +5,7 @@ import type { ChannelMember, MessageOut } from "../../types/api";
 import { messageApi } from "../../api/messages";
 import { useAuth } from "../../context/AuthContext";
 import { errorMessage, formatDate, formatTimeShort } from "../../utils/format";
+import { displayName as safeDisplayName } from "../../utils/displayName";
 import { renderMessageContent } from "../../utils/renderContent";
 import { queryKeys } from "../../utils/queryKeys";
 import { Avatar } from "../common/Avatar";
@@ -24,7 +25,7 @@ export function MessageItem({ message, channelId, workspaceId, members, compact 
   const [draft, setDraft] = useState(message.content);
   const [actionError, setActionError] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-  const displayName = message.postedByNickname ?? message.postedByUsername;
+  const displayName = safeDisplayName(message.postedByNickname, message.postedByUsername);
   const isSystem = message.systemKind != null;
   const isMine = !isSystem && user?.userId === message.postedBy;
 

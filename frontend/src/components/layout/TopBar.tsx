@@ -3,6 +3,7 @@ import { LogOut, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { Avatar } from "../common/Avatar";
+import { displayName as safeDisplayName } from "../../utils/displayName";
 
 export function TopBar() {
   const navigate = useNavigate();
@@ -33,7 +34,7 @@ export function TopBar() {
           />
         </label>
       </form>
-      <Avatar name={user?.nickname ?? user?.username} className="h-7 w-7 text-xs" />
+      <Avatar name={safeDisplayName(user?.nickname, user?.username)} className="h-7 w-7 text-xs" />
       <button
         type="button"
         onClick={handleLogout}

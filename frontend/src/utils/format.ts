@@ -146,7 +146,8 @@ export function channelDisplayName(channel: {
   directNickname?: string | null;
 }): string {
   if (channel.type === "direct") {
-    return channel.directNickname ?? channel.directUsername ?? "Direct message";
+    const nick = channel.directNickname && !/[<>]/.test(channel.directNickname) ? channel.directNickname : null;
+    return nick ?? channel.directUsername ?? "Direct message";
   }
   return channel.channelName;
 }

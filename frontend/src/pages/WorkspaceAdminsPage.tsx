@@ -9,6 +9,7 @@ import { ErrorState } from "../components/common/ErrorState";
 import { LoadingSpinner } from "../components/common/LoadingSpinner";
 import { MainContent } from "../components/layout/MainContent";
 import { queryKeys } from "../utils/queryKeys";
+import { displayName as safeDisplayName } from "../utils/displayName";
 import type { WorkspaceAdmin } from "../types/api";
 
 interface AdminGroup {
@@ -70,10 +71,10 @@ export function WorkspaceAdminsPage() {
               <div className="divide-y divide-slate-100">
                 {group.admins.map((admin) => (
                   <div key={`${admin.workspaceId}-${admin.userId}`} className="flex items-center gap-3 px-4 py-2.5">
-                    <Avatar name={admin.nickname ?? admin.username} className="h-8 w-8" />
+                    <Avatar name={safeDisplayName(admin.nickname, admin.username)} className="h-8 w-8" />
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold text-slate-950">
-                        {admin.nickname ?? admin.username}
+                        {safeDisplayName(admin.nickname, admin.username)}
                       </p>
                       <p className="truncate text-xs text-slate-500">@{admin.username}</p>
                     </div>

@@ -13,6 +13,7 @@ import { ErrorState } from "../components/common/ErrorState";
 import { LoadingSpinner } from "../components/common/LoadingSpinner";
 import { MainContent } from "../components/layout/MainContent";
 import { errorMessage, formatDate } from "../utils/format";
+import { displayName as safeDisplayName } from "../utils/displayName";
 import { queryKeys } from "../utils/queryKeys";
 import { renderMessageContent } from "../utils/renderContent";
 
@@ -53,7 +54,9 @@ export function UserMessagesPage() {
   }, [numericUserId]);
 
   const first = query.data?.[0];
-  const displayName = first?.postedByNickname ?? first?.postedByUsername ?? `user #${numericUserId}`;
+  const displayName = first
+    ? safeDisplayName(first.postedByNickname, first.postedByUsername)
+    : `user #${numericUserId}`;
   const username = first?.postedByUsername;
   const isSelf = currentUser?.userId === numericUserId;
 

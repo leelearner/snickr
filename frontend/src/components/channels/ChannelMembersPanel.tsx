@@ -6,6 +6,7 @@ import { channelApi } from "../../api/channels";
 import type { ChannelMember } from "../../types/api";
 import { queryKeys } from "../../utils/queryKeys";
 import { Avatar } from "../common/Avatar";
+import { displayName as safeDisplayName } from "../../utils/displayName";
 
 interface ChannelMembersPanelProps {
   members: ChannelMember[];
@@ -55,7 +56,7 @@ export function ChannelMembersPanel({
       <div className="min-h-0 flex-1 overflow-y-auto py-1">
         {members.map((member) => {
           const isCurrentUser = member.userId === currentUserId;
-          const displayName = member.nickname ?? member.username;
+          const displayName = safeDisplayName(member.nickname, member.username);
           const content = (
             <>
               <Avatar name={displayName} className="h-7 w-7" />
