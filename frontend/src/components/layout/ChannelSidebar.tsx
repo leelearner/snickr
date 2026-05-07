@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { Link, NavLink } from "react-router-dom";
-import { ChevronDown, ChevronRight, Hash, Lock, MessageSquare, Plus, Users } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { Link, NavLink, useNavigate, useParams } from "react-router-dom";
+import { ChevronDown, ChevronRight, Hash, Lock, MessageSquare, Plus, Users, X } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { channelApi } from "../../api/channels";
 import { workspaceApi } from "../../api/workspaces";
 import { Badge } from "../common/Badge";
@@ -24,6 +24,10 @@ export function ChannelSidebar({ workspaceId }: { workspaceId?: number }) {
   const [createOpen, setCreateOpen] = useState(false);
   const [channelsOpen, setChannelsOpen] = useState(true);
   const [dmsOpen, setDmsOpen] = useState(true);
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const params = useParams<{ channelId?: string }>();
+  const activeChannelId = params.channelId ? Number(params.channelId) : undefined;
   const workspaceQuery = useQuery({
     queryKey: workspaceId ? queryKeys.workspace(workspaceId) : ["workspace", "none"],
     queryFn: () => workspaceApi.get(workspaceId!),
@@ -33,6 +37,17 @@ export function ChannelSidebar({ workspaceId }: { workspaceId?: number }) {
     queryKey: workspaceId ? queryKeys.channels(workspaceId) : ["channels", "none"],
     queryFn: () => channelApi.list(workspaceId!),
     enabled: Boolean(workspaceId),
+  });
+  const hideDmMutation = useMutation({
+    mutationFn: (channelId: number) => channelApi.leave(channelId),
+    onSuccess: async (_data, channelId) => {
+      if (workspaceId) {
+        await queryClient.invalidateQueries({ queryKey: queryKeys.channels(workspaceId) });
+      }
+      if (activeChannelId === channelId && workspaceId) {
+        navigate(`/app/workspaces/${workspaceId}`);
+      }
+    },
   });
 
   if (!workspaceId) {
@@ -73,6 +88,21 @@ export function ChannelSidebar({ workspaceId }: { workspaceId?: number }) {
         </NavLink>
         {!channel.isMember && channel.type === "public" ? (
           <JoinChannelButton channelId={channel.channelId} workspaceId={workspaceId!} compact />
+        ) : null}
+        {channel.type === "direct" ? (
+          <button
+            type="button"
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              hideDmMutation.mutate(channel.channelId);
+            }}
+            disabled={hideDmMutation.isPending}
+            title="Close direct message"
+            className="invisible rounded p-1 text-slate-400 transition hover:bg-slate-800 hover:text-white focus-visible:visible focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white group-hover:visible"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
         ) : null}
       </div>
     );
