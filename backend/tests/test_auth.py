@@ -42,6 +42,43 @@ async def test_register_duplicate_returns_409(make_client, uid):
     assert r.status_code == 409
 
 
+async def test_register_normalizes_username_and_email_case(make_client, uid):
+    c1 = await make_client()
+    c2 = await make_client()
+    c3 = await make_client()
+
+    mixed_username = f"{uid}User"
+    mixed_email = f"{uid}User@Example.COM"
+    r = await c1.post("/api/auth/register", json={
+        "email": mixed_email,
+        "username": mixed_username,
+        "password": "pw-12345",
+    })
+    assert r.status_code == 201, r.text
+    assert r.json()["email"] == mixed_email.lower()
+    assert r.json()["username"] == mixed_username.lower()
+
+    r = await c1.post("/api/auth/logout")
+    assert r.status_code == 200
+
+    r = await c2.post("/api/auth/register", json={
+        "email": f"{uid}other@example.com",
+        "username": mixed_username.upper(),
+        "password": "pw-12345",
+    })
+    assert r.status_code == 409
+
+    r = await c3.post("/api/auth/register", json={
+        "email": mixed_email.upper(),
+        "username": f"{uid}other",
+        "password": "pw-12345",
+    })
+    assert r.status_code == 409
+
+    r = await c2.post("/api/auth/login", json={"username": mixed_username.upper(), "password": "pw-12345"})
+    assert r.status_code == 200
+
+
 async def test_login_wrong_password_returns_401(make_client, uid):
     c1 = await make_client()
     c2 = await make_client()
