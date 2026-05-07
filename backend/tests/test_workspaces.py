@@ -131,6 +131,32 @@ async def test_remove_member_kicks_from_channels_too(make_client, uid):
     assert b["userId"] not in {m["userId"] for m in detail["members"]}
 
 
+async def test_removed_member_can_be_reinvited(make_client, uid):
+    alice = await make_client()
+    bob = await make_client()
+    await register(alice, uid + "a")
+    b = await register(bob, uid + "b")
+
+    ws_id = (await alice.post("/api/workspaces", json={"name": f"ws_{uid}"})).json()["workspaceId"]
+    await alice.post(f"/api/workspaces/{ws_id}/invitations", json={"username": b["username"]})
+    inv_id = (await bob.get("/api/me/workspace-invitations")).json()[0]["invitationId"]
+    await bob.post(f"/api/me/workspace-invitations/{inv_id}", json={"accept": True})
+
+    r = await alice.delete(f"/api/workspaces/{ws_id}/members/{b['userId']}")
+    assert r.status_code == 204
+
+    r = await alice.post(f"/api/workspaces/{ws_id}/invitations", json={"username": b["username"]})
+    assert r.status_code == 201, r.text
+
+    invs = (await bob.get("/api/me/workspace-invitations")).json()
+    reinvite_id = next(i["invitationId"] for i in invs if i["workspaceId"] == ws_id)
+    r = await bob.post(f"/api/me/workspace-invitations/{reinvite_id}", json={"accept": True})
+    assert r.status_code == 200
+
+    detail = (await alice.get(f"/api/workspaces/{ws_id}")).json()
+    assert b["userId"] in {m["userId"] for m in detail["members"]}
+
+
 async def test_admins_endpoint_includes_my_workspace_admins(make_client, uid):
     """c.3 — list all admins. We just verify our own workspace's admin shows up."""
     alice = await make_client()
