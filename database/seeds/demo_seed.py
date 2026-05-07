@@ -28,7 +28,8 @@ USERS = [
     ("bob@nyu.edu", "bob", "Bob Garcia"),
     ("carol@nyu.edu", "carol", "Carol Patel"),
     ("dave@nyu.edu", "dave", "Dave Kim"),
-    ("prof@nyu.edu", "prof", "Prof Davies"),
+    ("suel@nyu.edu", "prof", "Torsten Suel"),
+    ("jerry@nyu.edu", "jerry", "Jerry Gou"),
     ("newcomer@nyu.edu", "newcomer", "Newcomer"),
 ]
 
@@ -165,6 +166,7 @@ async def seed():
                 ("chess", admin_role),
                 ("xingyu", admin_role),
                 ("prof", admin_role),
+                ("jerry", admin_role),
                 ("alice", member_role),
                 ("bob", member_role),
                 ("carol", member_role),
@@ -202,7 +204,7 @@ async def seed():
             ch_office = await make_channel(ws1, "office-hours", t_priv, "prof")
 
             for ch in (ch_general1, ch_proj, ch_help):
-                for u in ("chess", "xingyu", "alice", "bob", "carol", "prof"):
+                for u in ("chess", "xingyu", "alice", "bob", "carol", "prof", "jerry"):
                     await conn.execute(
                         """
                         INSERT INTO channelmember (channelID, userID, joined_time)
@@ -213,7 +215,7 @@ async def seed():
                         uid[u],
                     )
 
-            for u in ("prof", "chess"):
+            for u in ("prof", "chess", "jerry"):
                 await conn.execute(
                     """
                     INSERT INTO channelmember (channelID, userID, joined_time)
@@ -256,7 +258,8 @@ async def seed():
                 ("bob", "Got it. So workspacemember is the join table with a role attribute.", 5 * DAYS - 3 * HOURS),
                 ("alice", "Right, role is a foreign key into the roles lookup table.", 5 * DAYS - 4 * HOURS),
                 ("carol", "Do we need a separate notifications table for Project 2?", 2 * DAYS),
-                ("chess", "@carol no, we reuse the mentions table for Inbox events. Three classifications: mention, dm, join.", 2 * DAYS - HOURS),
+                ("jerry", "@carol no, you can reuse the mentions table. Inbox classification can read from columns instead of content.", 2 * DAYS - 30 * 60),
+                ("chess", "Thanks @jerry, that's exactly what we did. Three classifications: mention, dm, join.", 2 * DAYS - HOURS),
                 ("carol", "Clever. Saves a table.", 2 * DAYS - 2 * HOURS),
             ]
             for author, content, ago in help_msgs:
@@ -266,6 +269,7 @@ async def seed():
                 ("chess", "Hi Prof, can I demo on May 8 at 10am?", 4 * DAYS),
                 ("prof", "Yes, 10am works. Bring the seed data and a session log.", 4 * DAYS - HOURS),
                 ("chess", "Will do, thanks!", 4 * DAYS - 2 * HOURS),
+                ("prof", "Add @jerry to the slot too so a TA can grade in parallel.", 3 * DAYS),
             ]
             for author, content, ago in office_msgs:
                 await post(conn, ch_office, uid[author], content, ago)

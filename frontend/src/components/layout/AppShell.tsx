@@ -8,14 +8,14 @@ export function AppShell() {
   const selectedWorkspaceId = workspaceId ? Number(workspaceId) : undefined;
 
   return (
-    <div className="grid h-full min-h-screen grid-cols-[72px_minmax(220px,280px)_1fr] bg-white max-lg:grid-cols-[64px_220px_minmax(0,1fr)] max-md:grid-cols-[56px_minmax(0,1fr)]">
+    <div className="grid h-screen grid-cols-[72px_minmax(220px,280px)_1fr] overflow-hidden bg-white max-lg:grid-cols-[64px_220px_minmax(0,1fr)] max-md:grid-cols-[56px_minmax(0,1fr)]">
       <WorkspaceRail selectedWorkspaceId={selectedWorkspaceId} />
       <div className="border-r border-slate-800 bg-slate-900 text-slate-100 max-md:hidden">
         <ChannelSidebar workspaceId={selectedWorkspaceId} />
       </div>
-      <div className="flex min-w-0 flex-col bg-white">
+      <div className="flex h-full min-h-0 min-w-0 flex-col bg-white">
         <TopBar />
-        <main className="min-h-0 flex-1 overflow-auto bg-white">
+        <main className="min-h-0 flex-1 overflow-hidden bg-white">
           <Outlet />
         </main>
       </div>

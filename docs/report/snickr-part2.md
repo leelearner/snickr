@@ -472,17 +472,15 @@ guarantee of Section 3.2: every value is bound through asyncpg's
   channel sidebar already shows every channel the user can see, so a
   channel search would duplicate the existing list endpoint.
 
-**Why two stored procedures and not twelve.** A wider catalog of stored
-procedures would have moved single-table reads and writes into the
-database for no clear gain. A one-line `INSERT` or `SELECT` does not
-benefit from PL/pgSQL encapsulation. Stored procedures were reserved for
-the two cases where atomicity across multiple tables matters most and
-where the application would otherwise have to coordinate the sequence by
-hand: channel creation with the first-member insert, and invitation
-acceptance with the membership insert. The remaining transactional
-operations live as `async with conn.transaction()` blocks in handlers and
-are catalogued by feature above and again by transaction boundary in
-Section 3.3.
+**Why two stored procedures and not twelve.** Stored procedures were
+reserved for the two operations where atomicity across multiple tables
+matters most and the application would otherwise have to coordinate the
+sequence by hand: channel creation with the first-member insert, and
+invitation acceptance with the membership insert. Single-table reads
+and writes do not benefit from PL/pgSQL encapsulation and stay in the
+handlers as parameterised SQL. Other multi-step writes use
+`async with conn.transaction()` blocks instead of stored procedures
+when the surrounding logic is more naturally written in Python.
 
 The seven Part 1 query templates, kept as parameterised statements with
 `:name` placeholders in `database/queries/queries.sql`, are reissued by
@@ -527,43 +525,15 @@ prepared-statement cache, allowing the same SQL to be reissued cleanly
 through a connection pooler such as Supabase's session pooler without
 prepared-statement name clashes.
 
-**Endpoint inventory.** The full API is exposed under `/api`. The table
-below lists every endpoint, grouped by resource.
-
-| Method | Path | Purpose |
-| --- | --- | --- |
-| POST | `/api/auth/register` | Create a user and start a session |
-| POST | `/api/auth/login` | Verify password and start a session |
-| POST | `/api/auth/logout` | Clear the session cookie |
-| GET | `/api/auth/me` | Return the current user's profile |
-| PATCH | `/api/auth/me` | Update email, display name, or password |
-| GET | `/api/workspaces` | List workspaces I belong to |
-| POST | `/api/workspaces` | Create a workspace and become its first admin |
-| GET | `/api/workspaces/{id}` | Workspace details and member list |
-| POST | `/api/workspaces/{id}/invitations` | Invite a user by username |
-| GET | `/api/workspaces/{id}/stale-channel-invites` | Channel invites unanswered for over five days |
-| DELETE | `/api/workspaces/{id}/members/{userId}` | Remove a member |
-| PATCH | `/api/workspaces/{id}/members/{userId}/role` | Promote or demote a member |
-| GET | `/api/workspaces/admins` | All admins across the workspaces I belong to |
-| GET | `/api/me/workspace-invitations` | Pending workspace invitations addressed to me |
-| POST | `/api/me/workspace-invitations/{id}` | Accept or decline a workspace invitation |
-| GET | `/api/workspaces/{id}/channels` | Channels visible to me in a workspace |
-| POST | `/api/workspaces/{id}/channels` | Create a public or private channel |
-| POST | `/api/workspaces/{id}/direct-messages` | Open or reuse a direct-message channel |
-| GET | `/api/channels/{id}` | Channel details and member list |
-| POST | `/api/channels/{id}/join` | Self-join a public channel |
-| POST | `/api/channels/{id}/leave` | Leave a public or private channel I am in |
-| POST | `/api/channels/{id}/invitations` | Invite a member to a channel |
-| GET | `/api/me/channel-invitations` | Pending channel invitations addressed to me |
-| POST | `/api/me/channel-invitations/{id}` | Accept or decline a channel invitation |
-| GET | `/api/channels/{id}/messages` | Channel timeline in chronological order |
-| POST | `/api/channels/{id}/messages` | Post a message |
-| PATCH | `/api/channels/{id}/messages/{messageId}` | Edit a message I posted |
-| DELETE | `/api/channels/{id}/messages/{messageId}` | Delete a message I posted |
-| DELETE | `/api/workspaces/{id}` | Disband a workspace, admins only |
-| GET | `/api/users/{id}/messages` | All messages posted by a user, with workspace and channel context |
-| GET | `/api/search?q=` | Substring search across messages I can see |
-| GET | `/api/me/mentions` | Inbox events for the current user, classified as `mention`, `dm`, or `join` |
+**Endpoint inventory.** The full API is exposed under `/api` and is
+organised into five resource groups: authentication, workspaces and
+their invitations, channels and their invitations, messages and
+threads, and the inbox plus search. FastAPI generates an interactive
+catalog of every route from the same Pydantic models that validate
+requests; the catalog is served at `/docs` while the backend is
+running and is the canonical reference for path, method, request
+body, and response schema. The conventions that govern those routes
+are described next.
 
 **HTTP method conventions.** The API uses `GET` for reads, `POST` for
 creating new rows or performing actions without a clean `PUT` semantics
@@ -741,17 +711,10 @@ preserves.
   sync.
 
 **Isolation level.** The default Postgres isolation level, READ
-COMMITTED, is left in place. This level is appropriate because the
-backend's writes touch a small number of unrelated rows across tables,
-and the unique constraints below catch the few cases where two writers
-could land on the same key.
-
-**MVCC framing.** Under MVCC, every transaction sees a consistent
-snapshot of each row at statement start, preventing dirty reads without
-blocking readers behind writers. Lost updates and write skew on the same
-row are prevented because Postgres locks the row for any concurrent
-writer until the holder of the row's latest version commits or rolls
-back. The application does not rely on any stricter isolation level.
+COMMITTED, is left in place. The backend's writes touch a small number
+of unrelated rows across tables, and the unique constraints below catch
+the few cases where two writers could land on the same key. The
+application does not rely on any stricter isolation level.
 
 **Unique constraints as a safety net.** Where two writers could race to
 insert duplicates, the schema's unique constraints act as the final
@@ -898,27 +861,15 @@ running React frontend.
 
 ### 7.1 What the backend logs
 
-`app/core/logging.py` configures Python's root logger to a single
-formatter and attaches a `StreamHandler` for stdout plus a `FileHandler`
-that appends to `backend/snickr.log`. The dev terminal still sees every
-line, and the file gives a stable artefact for the demo.
-
-The backend emits two streams:
-
-- **HTTP requests.** An ASGI middleware in `app/main.py` wraps every
-  request and logs the method, path, status code, the user identifier
-  resolved from the session cookie, and the wall-clock latency. Each
-  line begins `snickr.http`.
-- **Domain events.** Handlers call the `log_event(category, **fields)`
-  helper at every interesting state change. The helper serialises the
-  fields as `key=value` pairs and prefixes the line with `snickr.event`.
-  Categories include `auth.login`, `workspace.create`,
-  `channel.invitation_response`, `message.post` with the parsed mention
-  count, and `workspace.last_admin_guard`.
-
-The driver script inserts `### [HH:MM:SS] description` markers into the
-log file between API calls, so the captured transcript reads as a
-narrative rather than a flat event stream.
+`app/core/logging.py` writes every log line to both stdout and
+`backend/snickr.log`. Two streams are produced: an ASGI middleware in
+`app/main.py` emits one `snickr.http` line per request with method,
+path, status, user identifier, and latency; handlers call a
+`log_event(category, **fields)` helper at each interesting state change
+and emit one `snickr.event` line with `key=value` fields. The driver
+script inserts `### [HH:MM:SS] description` markers between API calls
+so the captured transcript reads as narrative rather than as a flat
+event stream.
 
 ### 7.2 Authentication and workspace navigation
 
@@ -1192,7 +1143,7 @@ dashboard shows every public channel.
 2026-05-07 18:36:22 INFO  snickr.http  PATCH /api/auth/me 200 uid=1 448ms
 ```
 
-### 4.12 Workspace lifecycle
+### 7.12 Workspace lifecycle
 
 Finally Chess creates a throwaway workspace called `Sandbox` and
 disbands it. The DELETE handler trusts the foreign-key cascade on

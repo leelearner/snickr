@@ -35,7 +35,8 @@ than five days.
 |---|---|---|
 | `chess`     | Chess Xu    | You. Admin of NYU CS6083; member of Roommates. |
 | `xingyu`    | Xingyu Li   | Teammate. Admin of NYU CS6083. |
-| `prof`      | Prof Davies | Admin of NYU CS6083. |
+| `prof`      | Torsten Suel | Course instructor. Admin of NYU CS6083. |
+| `jerry`     | Jerry Gou   | Course TA. Admin of NYU CS6083. |
 | `alice`     | Alice Chen  | Member of NYU CS6083. Sole admin of Roommates. |
 | `bob`       | Bob Garcia  | Member of NYU CS6083 and Roommates. |
 | `carol`     | Carol Patel | Member of NYU CS6083. |
@@ -48,10 +49,10 @@ than five days.
 
 | Channel | Type | Members | Notes |
 |---|---|---|---|
-| `general`        | public  | chess, xingyu, prof, alice, bob, carol | Default channel, has welcome and announcement messages. |
-| `project-snickr` | public  | same as general | Discussion of the Part 2 build. |
-| `help`           | public  | same as general | Q and A on the schema and project work. |
-| `office-hours`   | private | prof, chess only | Demonstrates a private channel hidden from non-members. |
+| `general`        | public  | chess, xingyu, prof, jerry, alice, bob, carol | Default channel, has welcome and announcement messages. |
+| `project-snickr` | public  | same as general | Discussion of the Part 2 build, plus a 4-message demo thread. |
+| `help`           | public  | same as general | Q and A; Jerry the TA jumps in here. |
+| `office-hours`   | private | prof, chess, jerry only | Demonstrates a private channel hidden from non-members. |
 
 **Roommates** (workspaceId 2, created by alice)
 

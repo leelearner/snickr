@@ -31,10 +31,7 @@ export function ThreadPanel({
   return (
     <aside className="flex h-full w-full flex-col border-l border-slate-200 bg-white sm:max-w-md">
       <header className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
-        <div>
-          <h2 className="text-sm font-semibold text-slate-950">Thread</h2>
-          <p className="text-xs text-slate-500">Replies stay in this side panel.</p>
-        </div>
+        <h2 className="text-sm font-semibold text-slate-950">Thread</h2>
         <button
           type="button"
           onClick={onClose}
