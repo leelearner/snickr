@@ -334,8 +334,10 @@ join. The schema uses tables instead so new values can be added with a
 single `INSERT` rather than a schema migration, and so foreign-key
 referential integrity catches typos that a `CHECK` list cannot.
 
-**Indexes.** The schema declares four secondary indexes on top of the
-implicit primary-key and unique-constraint indexes.
+**Indexes.** The schema declares five secondary indexes on top of the
+implicit primary-key and unique-constraint indexes. Three are in
+`schema.sql`, one is added by `004_mentions.sql`, and one by
+`008_message_thread.sql`.
 
 | Index | Table and columns | Reason |
 | --- | --- | --- |
@@ -343,6 +345,7 @@ implicit primary-key and unique-constraint indexes.
 | `idx_workspace_member_user` | `workspacemember (userID)` | The "list workspaces I belong to" query filters by `userID`. The composite primary key `(workspaceID, userID)` does not help this query because `workspaceID` is the leading column. |
 | `idx_channel_member_user` | `channelmember (userID)` | Same reasoning as the workspace index, applied to channels. |
 | `idx_mentions_user` | `mentions (mentioned_user, created_time DESC)` | The Inbox query filters by `mentioned_user` and orders by recency, so a covering composite index turns the read into a single backward index scan. |
+| `idx_messages_parent` | `messages (parent_messageID) WHERE parent_messageID IS NOT NULL` | The thread-replies query filters by `parent_messageID`. A partial index excludes the top-level rows, which dominate the table, so the index is small and the lookup is a single seek. |
 
 Foreign-key columns that participate in joins benefit from indexing
 because of cascade-delete behaviour on the parent. Postgres scans the
@@ -779,9 +782,11 @@ unparameterised by user identifier; the page reads its content from
 **Deep linking.** The frontend reconstructs page state from the URL on
 every load. A user who pastes the URL of a channel into a fresh browser
 session lands on the login page, logs in, and is redirected to the same
-channel. The redirect target is preserved across the login round-trip
-through a `?next=` query parameter on the login form. A user who pastes
-a search URL is taken to the search page with the query prefilled and
+channel. The protected route stashes the original `Location` object in
+React Router's `state` when it redirects to `/login`, and the login
+page reads `location.state.from.pathname` after a successful sign-in
+and navigates back. The URL itself stays clean. A user who pastes a
+search URL is taken to the search page with the query prefilled and
 the results computed.
 
 **Session invalidation.** `POST /api/auth/logout` clears the
@@ -922,7 +927,7 @@ a single asyncpg argument with `WHERE m.content ILIKE $2` and joins
 through `channelmember` so the result set is intersected with the
 channels Chess can read.
 
-![Figure 7: Search results for `demo`. Three messages match across `#general`, `#project-snickr`, and the private `#office-hours`. Bob running the same search would see only the public hits because his row is missing from `channelmember` for the private channel.](../session-logs/screenshots/06_chess_search_results.png)
+![Figure 7: Search results for `demo`. Four messages match across `#general`, `#project-snickr`, and the private `#office-hours`. Bob running the same search would see only the public hits because his row is missing from `channelmember` for the private channel.](../session-logs/screenshots/06_chess_search_results.png)
 
 ```
 ### [18:36:11] chess edits her announcement (PATCH messages, sets edited_time)
