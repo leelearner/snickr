@@ -1,12 +1,17 @@
 from datetime import datetime
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, StringConstraints
+
+
+WorkspaceName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=30)]
+WorkspaceDescription = Annotated[str, StringConstraints(strip_whitespace=True, max_length=200)]
+Username = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=30)]
 
 
 class WorkspaceCreate(BaseModel):
-    name: str = Field(min_length=1, max_length=30)
-    description: str | None = Field(default=None, max_length=200)
+    name: WorkspaceName
+    description: WorkspaceDescription | None = None
 
 
 class WorkspaceSummary(BaseModel):
@@ -35,7 +40,7 @@ class WorkspaceDetail(BaseModel):
 
 
 class InviteCreate(BaseModel):
-    username: str = Field(min_length=1, max_length=30)
+    username: Username
 
 
 class WorkspaceInvitation(BaseModel):

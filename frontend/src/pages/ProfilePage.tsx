@@ -73,6 +73,10 @@ export function ProfilePage() {
       setPasswordValidation("Both current and new password are required.");
       return;
     }
+    if (newPassword.length < 8) {
+      setPasswordValidation("New password must be at least 8 characters.");
+      return;
+    }
     if (newPassword !== confirmNewPassword) {
       setPasswordValidation("New passwords do not match.");
       return;

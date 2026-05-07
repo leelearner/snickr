@@ -58,7 +58,7 @@ async def _cleanup_test_users(app_lifespan):
     await conn.close()
 
 
-async def register(client: AsyncClient, username: str, password: str = "pw", **extra) -> dict:
+async def register(client: AsyncClient, username: str, password: str = "pw-12345", **extra) -> dict:
     payload = {
         "email": f"{username}@example.com",
         "username": username,

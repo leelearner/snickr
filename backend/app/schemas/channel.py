@@ -1,14 +1,16 @@
 from datetime import datetime
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, StringConstraints
 
 
 ChannelType = Literal["public", "private", "direct"]
+ChannelName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=50)]
+Username = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=30)]
 
 
 class ChannelCreate(BaseModel):
-    channelName: str = Field(min_length=1, max_length=50)
+    channelName: ChannelName
     type: ChannelType = "public"
 
 
@@ -45,7 +47,7 @@ class ChannelDetail(BaseModel):
 
 
 class ChannelInviteCreate(BaseModel):
-    username: str = Field(min_length=1, max_length=30)
+    username: Username
 
 
 class ChannelInvitation(BaseModel):

@@ -48,6 +48,10 @@ export function RegisterPage() {
       setValidation("Username and nickname must be 30 characters or fewer.");
       return;
     }
+    if (password.length < 8) {
+      setValidation("Password must be at least 8 characters.");
+      return;
+    }
     if (password !== confirmPassword) {
       setValidation("Passwords do not match.");
       return;

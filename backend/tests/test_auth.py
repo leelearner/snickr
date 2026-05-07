@@ -25,7 +25,7 @@ async def test_register_login_me_logout(make_client, uid):
     assert r.status_code == 401
 
     # log back in
-    r = await c.post("/api/auth/login", json={"username": uid, "password": "pw"})
+    r = await c.post("/api/auth/login", json={"username": uid, "password": "pw-12345"})
     assert r.status_code == 200
 
 
@@ -37,7 +37,7 @@ async def test_register_duplicate_returns_409(make_client, uid):
     r = await c2.post("/api/auth/register", json={
         "email": f"{uid}-dup@example.com",
         "username": uid,  # duplicate
-        "password": "pw",
+        "password": "pw-12345",
     })
     assert r.status_code == 409
 
@@ -47,7 +47,7 @@ async def test_login_wrong_password_returns_401(make_client, uid):
     c2 = await make_client()
     await register(c1, uid)
 
-    r = await c2.post("/api/auth/login", json={"username": uid, "password": "WRONG"})
+    r = await c2.post("/api/auth/login", json={"username": uid, "password": "WRONG-pw"})
     assert r.status_code == 401
     # Same message as unknown-user, to avoid leaking which usernames exist.
     assert r.json()["detail"] == "invalid credentials"
@@ -55,7 +55,7 @@ async def test_login_wrong_password_returns_401(make_client, uid):
 
 async def test_login_unknown_user_returns_401(make_client):
     c = await make_client()
-    r = await c.post("/api/auth/login", json={"username": "no_such_user_zzz", "password": "x"})
+    r = await c.post("/api/auth/login", json={"username": "no_such_user_zzz", "password": "irrelevant"})
     assert r.status_code == 401
     assert r.json()["detail"] == "invalid credentials"
 
@@ -72,20 +72,20 @@ async def test_profile_password_change_requires_current(make_client, uid):
     c = await make_client()
     await register(c, uid)
 
-    r = await c.patch("/api/auth/me", json={"newPassword": "new"})
+    r = await c.patch("/api/auth/me", json={"newPassword": "newer-pw-1"})
     assert r.status_code == 400
 
-    r = await c.patch("/api/auth/me", json={"currentPassword": "WRONG", "newPassword": "new"})
+    r = await c.patch("/api/auth/me", json={"currentPassword": "WRONG-pw", "newPassword": "newer-pw-1"})
     assert r.status_code == 403
 
-    r = await c.patch("/api/auth/me", json={"currentPassword": "pw", "newPassword": "newpw"})
+    r = await c.patch("/api/auth/me", json={"currentPassword": "pw-12345", "newPassword": "newer-pw-1"})
     assert r.status_code == 200
 
     # Old password no longer works; new one does.
     c2 = await make_client()
-    r = await c2.post("/api/auth/login", json={"username": uid, "password": "pw"})
+    r = await c2.post("/api/auth/login", json={"username": uid, "password": "pw-12345"})
     assert r.status_code == 401
-    r = await c2.post("/api/auth/login", json={"username": uid, "password": "newpw"})
+    r = await c2.post("/api/auth/login", json={"username": uid, "password": "newer-pw-1"})
     assert r.status_code == 200
 
 
