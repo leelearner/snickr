@@ -6,6 +6,9 @@ import { useAuth } from "../context/AuthContext";
 import { Avatar } from "../components/common/Avatar";
 import { Button } from "../components/common/Button";
 import { Input } from "../components/common/Input";
+import { PasswordStrength } from "../components/common/PasswordStrength";
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 import { MainContent } from "../components/layout/MainContent";
 import { errorMessage } from "../utils/format";
 import { queryKeys } from "../utils/queryKeys";
@@ -17,6 +20,7 @@ export function ProfilePage() {
   const [nickname, setNickname] = useState(user?.nickname ?? "");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
   const [accountFlash, setAccountFlash] = useState("");
   const [passwordFlash, setPasswordFlash] = useState("");
   const [accountValidation, setAccountValidation] = useState("");
@@ -37,6 +41,7 @@ export function ProfilePage() {
       await queryClient.invalidateQueries({ queryKey: queryKeys.me });
       setCurrentPassword("");
       setNewPassword("");
+      setConfirmNewPassword("");
       setPasswordFlash("Password updated.");
     },
   });
@@ -49,8 +54,12 @@ export function ProfilePage() {
       setAccountValidation("Email is required.");
       return;
     }
+    if (!EMAIL_PATTERN.test(payload.email)) {
+      setAccountValidation("Please enter a valid email address.");
+      return;
+    }
     if ((payload.nickname?.length ?? 0) > 30) {
-      setAccountValidation("Display name must be 30 characters or fewer.");
+      setAccountValidation("Nickname must be 30 characters or fewer.");
       return;
     }
     setAccountValidation("");
@@ -62,6 +71,10 @@ export function ProfilePage() {
     setPasswordFlash("");
     if (!currentPassword || !newPassword) {
       setPasswordValidation("Both current and new password are required.");
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      setPasswordValidation("New passwords do not match.");
       return;
     }
     setPasswordValidation("");
@@ -97,11 +110,11 @@ export function ProfilePage() {
           />
           <div className="sm:col-span-2">
             <Input
-              label="Display name"
+              label="Nickname"
+              optional
               value={nickname}
               maxLength={30}
               onChange={(event) => setNickname(event.target.value)}
-              placeholder="Optional"
             />
             <p className="mt-1 text-xs text-slate-500">
               Shown next to your messages. Leave empty to use your username.
@@ -140,11 +153,22 @@ export function ProfilePage() {
             onChange={(event) => setCurrentPassword(event.target.value)}
             autoComplete="current-password"
           />
+          <div className="hidden sm:block" />
+          <div>
+            <Input
+              label="New password"
+              type="password"
+              value={newPassword}
+              onChange={(event) => setNewPassword(event.target.value)}
+              autoComplete="new-password"
+            />
+            <PasswordStrength password={newPassword} />
+          </div>
           <Input
-            label="New password"
+            label="Confirm new password"
             type="password"
-            value={newPassword}
-            onChange={(event) => setNewPassword(event.target.value)}
+            value={confirmNewPassword}
+            onChange={(event) => setConfirmNewPassword(event.target.value)}
             autoComplete="new-password"
           />
         </div>

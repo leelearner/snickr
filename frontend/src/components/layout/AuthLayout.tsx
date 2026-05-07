@@ -2,16 +2,21 @@ import type { ReactNode } from "react";
 
 export function AuthLayout({ title, subtitle, children }: { title: string; subtitle: string; children: ReactNode }) {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-100 px-4 py-10">
-      <div className="w-full max-w-md rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="mb-6">
-          <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-md bg-slate-950 text-lg font-bold text-white">
+    <div className="grid min-h-screen place-items-center bg-gradient-to-b from-slate-100 to-slate-200 px-4 py-6">
+      <div className="w-full max-w-md">
+        <div className="mb-8 flex items-center justify-center gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-slate-950 text-xl font-bold text-white shadow-md">
             S
           </div>
-          <h1 className="text-2xl font-semibold text-slate-950">{title}</h1>
-          <p className="mt-1 text-sm text-slate-500">{subtitle}</p>
+          <span className="text-2xl font-bold tracking-tight text-slate-950">Snickr</span>
         </div>
-        {children}
+        <div className="rounded-xl border border-slate-200 bg-white p-7 shadow-sm">
+          <div className="mb-6">
+            <h1 className="text-xl font-semibold text-slate-950">{title}</h1>
+            <p className="mt-1 text-sm text-slate-500">{subtitle}</p>
+          </div>
+          {children}
+        </div>
       </div>
     </div>
   );

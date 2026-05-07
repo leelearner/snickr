@@ -11,4 +11,5 @@ export const queryKeys = {
   workspaceInvitations: ["me", "workspace-invitations"] as const,
   channelInvitations: ["me", "channel-invitations"] as const,
   search: (q: string) => ["search", q] as const,
+  mentions: ["me", "mentions"] as const,
 };

@@ -33,6 +33,11 @@ export const channelApi = {
       method: "POST",
     });
   },
+  leave(channelId: number) {
+    return apiRequest<void>(`/api/channels/${channelId}/leave`, {
+      method: "POST",
+    });
+  },
   inviteUser(channelId: number, payload: InviteUserPayload) {
     return apiRequest<{ invitationId: number }>(`/api/channels/${channelId}/invitations`, {
       method: "POST",

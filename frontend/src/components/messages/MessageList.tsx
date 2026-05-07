@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useRef } from "react";
-import type { MessageOut } from "../../types/api";
+import type { ChannelMember, MessageOut } from "../../types/api";
 import { dateKey, formatDateDivider } from "../../utils/format";
 import { EmptyState } from "../common/EmptyState";
 import { MessageItem } from "./MessageItem";
@@ -7,6 +7,7 @@ import { MessageItem } from "./MessageItem";
 const FIVE_MINUTES_MS = 5 * 60 * 1000;
 
 function shouldGroupWithPrevious(prev: MessageOut, current: MessageOut): boolean {
+  if (prev.systemKind != null || current.systemKind != null) return false;
   if (prev.postedBy !== current.postedBy) return false;
   const prevTime = new Date(prev.postedTime).getTime();
   const currentTime = new Date(current.postedTime).getTime();
@@ -14,7 +15,17 @@ function shouldGroupWithPrevious(prev: MessageOut, current: MessageOut): boolean
   return currentTime - prevTime < FIVE_MINUTES_MS;
 }
 
-export function MessageList({ messages }: { messages: MessageOut[] }) {
+export function MessageList({
+  messages,
+  channelId,
+  workspaceId,
+  members,
+}: {
+  messages: MessageOut[];
+  channelId: number;
+  workspaceId?: number;
+  members?: ChannelMember[];
+}) {
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -46,7 +57,13 @@ export function MessageList({ messages }: { messages: MessageOut[] }) {
                 <div className="h-px flex-1 bg-slate-200" />
               </div>
             ) : null}
-            <MessageItem message={message} compact={compact} />
+            <MessageItem
+              message={message}
+              channelId={channelId}
+              workspaceId={workspaceId}
+              members={members}
+              compact={compact}
+            />
           </Fragment>
         );
       })}

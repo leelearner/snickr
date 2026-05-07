@@ -153,3 +153,22 @@ async def test_stale_channel_invites_endpoint_smoke(make_client, uid):
     r = await alice.get(f"/api/workspaces/{ws_id}/stale-channel-invites")
     assert r.status_code == 200
     assert r.json() == []
+
+
+async def test_disband_workspace_admin_only(make_client, uid):
+    alice = await make_client()
+    bob = await make_client()
+    await register(alice, uid + "a")
+    b = await register(bob, uid + "b")
+    ws_id = (await alice.post("/api/workspaces", json={"name": f"ws_{uid}"})).json()["workspaceId"]
+    await alice.post(f"/api/workspaces/{ws_id}/invitations", json={"username": b["username"]})
+    inv_id = (await bob.get("/api/me/workspace-invitations")).json()[0]["invitationId"]
+    await bob.post(f"/api/me/workspace-invitations/{inv_id}", json={"accept": True})
+
+    r = await bob.delete(f"/api/workspaces/{ws_id}")
+    assert r.status_code == 403
+
+    r = await alice.delete(f"/api/workspaces/{ws_id}")
+    assert r.status_code in (200, 204)
+    r = await alice.get(f"/api/workspaces/{ws_id}")
+    assert r.status_code in (403, 404)

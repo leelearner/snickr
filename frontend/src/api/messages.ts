@@ -11,6 +11,17 @@ export const messageApi = {
       body: payload,
     });
   },
+  update(channelId: number, messageId: number, payload: MessageCreatePayload) {
+    return apiRequest<MessageOut>(`/api/channels/${channelId}/messages/${messageId}`, {
+      method: "PATCH",
+      body: payload,
+    });
+  },
+  delete(channelId: number, messageId: number) {
+    return apiRequest<void>(`/api/channels/${channelId}/messages/${messageId}`, {
+      method: "DELETE",
+    });
+  },
   listByUser(targetUserId: number) {
     return apiRequest<UserMessage[]>(`/api/users/${targetUserId}/messages`);
   },

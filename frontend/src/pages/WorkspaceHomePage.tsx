@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { Hash, UserPlus, Users } from "lucide-react";
+import { Hash, Lock, UserPlus, Users } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { workspaceApi } from "../api/workspaces";
 import { channelApi } from "../api/channels";
@@ -61,25 +61,32 @@ export function WorkspaceHomePage() {
           <h2 className="text-sm font-semibold text-slate-950">Channels</h2>
           {channelsQuery.isLoading ? <LoadingSpinner /> : null}
           {channelsQuery.error ? <ErrorState error={channelsQuery.error} /> : null}
-          {channelsQuery.data?.length === 0 ? (
-            <EmptyState title="No visible channels" description="Create or join a public channel from the sidebar." />
-          ) : (
-            <div className="mt-3 divide-y divide-slate-200">
-              {channelsQuery.data?.map((channel) => (
-                <Link
-                  key={channel.channelId}
-                  to={`/app/workspaces/${workspace.workspaceId}/channels/${channel.channelId}`}
-                  className="flex items-center justify-between py-3 text-sm hover:bg-slate-50"
-                >
-                  <span className="flex items-center gap-2 font-medium text-slate-900">
-                    <Hash className="h-4 w-4 text-slate-500" />
-                    {channel.channelName}
-                  </span>
-                  <Badge>{channel.type}{channel.isMember ? "" : " - not joined"}</Badge>
-                </Link>
-              ))}
-            </div>
-          )}
+          {(() => {
+            const visible = (channelsQuery.data ?? []).filter((c) => c.type !== "direct");
+            if (channelsQuery.data && visible.length === 0) {
+              return <EmptyState title="No visible channels" description="Create or join a public channel from the sidebar." />;
+            }
+            return (
+              <div className="mt-3 divide-y divide-slate-200">
+                {visible.map((channel) => {
+                  const Icon = channel.type === "private" ? Lock : Hash;
+                  return (
+                    <Link
+                      key={channel.channelId}
+                      to={`/app/workspaces/${workspace.workspaceId}/channels/${channel.channelId}`}
+                      className="flex items-center justify-between py-3 text-sm hover:bg-slate-50"
+                    >
+                      <span className="flex items-center gap-2 font-medium text-slate-900">
+                        <Icon className="h-4 w-4 text-slate-500" />
+                        {channel.channelName}
+                      </span>
+                      <Badge>{channel.type}{channel.isMember ? "" : " - not joined"}</Badge>
+                    </Link>
+                  );
+                })}
+              </div>
+            );
+          })()}
         </section>
         <StaleChannelInvitesCard workspaceId={workspace.workspaceId} />
       </div>

@@ -135,7 +135,7 @@ export function ChannelSidebar({ workspaceId }: { workspaceId?: number }) {
           className="flex items-center gap-2 rounded-md px-2 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white"
         >
           <Users className="h-4 w-4" />
-          Members
+          People
         </Link>
       </div>
       <CreateChannelDialog

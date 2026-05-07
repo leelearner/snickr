@@ -7,6 +7,9 @@ import { errorMessage } from "../utils/format";
 import { AuthLayout } from "../components/layout/AuthLayout";
 import { Button } from "../components/common/Button";
 import { Input } from "../components/common/Input";
+import { PasswordStrength } from "../components/common/PasswordStrength";
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function RegisterPage() {
   const navigate = useNavigate();
@@ -15,6 +18,7 @@ export function RegisterPage() {
   const [username, setUsername] = useState("");
   const [nickname, setNickname] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [validation, setValidation] = useState("");
   const mutation = useMutation({
     mutationFn: authApi.register,
@@ -36,8 +40,16 @@ export function RegisterPage() {
       setValidation("Email, username, and password are required.");
       return;
     }
+    if (!EMAIL_PATTERN.test(payload.email)) {
+      setValidation("Please enter a valid email address.");
+      return;
+    }
     if (payload.username.length > 30 || (payload.nickname?.length ?? 0) > 30) {
       setValidation("Username and nickname must be 30 characters or fewer.");
+      return;
+    }
+    if (password !== confirmPassword) {
+      setValidation("Passwords do not match.");
       return;
     }
     setValidation("");
@@ -45,12 +57,16 @@ export function RegisterPage() {
   }
 
   return (
-    <AuthLayout title="Create your Snickr account" subtitle="Start working with your team.">
+    <AuthLayout title="Create your account" subtitle="Sign up to start collaborating with your team.">
       <form className="space-y-4" onSubmit={submit}>
         <Input label="Email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} />
         <Input label="Username" value={username} maxLength={30} onChange={(event) => setUsername(event.target.value)} />
-        <Input label="Nickname" value={nickname} maxLength={30} onChange={(event) => setNickname(event.target.value)} />
-        <Input label="Password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} />
+        <Input label="Nickname" optional value={nickname} maxLength={30} onChange={(event) => setNickname(event.target.value)} />
+        <div>
+          <Input label="Password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} />
+          <PasswordStrength password={password} />
+        </div>
+        <Input label="Confirm password" type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} />
         {validation ? <p className="text-sm text-red-600">{validation}</p> : null}
         {mutation.error ? <p className="text-sm text-red-600">{errorMessage(mutation.error)}</p> : null}
         <Button className="w-full" type="submit" isLoading={mutation.isPending}>

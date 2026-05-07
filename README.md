@@ -6,7 +6,7 @@ Users register, join workspaces, chat in public and private channels, send direc
 The repo covers both project parts:
 
 - **Part 1.** Relational schema design with ER diagram, DDL, sample data, and test queries.
-- **Part 2.** Full-stack web app on top of the Part 1 schema, hosted on Supabase Postgres. Backend is FastAPI, frontend is React.
+- **Part 2.** Full-stack web app on top of the Part 1 schema, running on a local PostgreSQL instance during the demo. Backend is FastAPI, frontend is React.
 
 ## Repository layout
 
@@ -23,7 +23,7 @@ snickr/
 | `backend/` | API server. See `backend/README.md`. |
 | `frontend/` | Web UI. See `frontend/how-to-run.md`. |
 | `database/schema/schema.sql` | `CREATE TABLE` and index DDL |
-| `database/migrations/` | Incremental schema changes, numbered `001_*`, `002_*`, `003_*` |
+| `database/migrations/` | Incremental schema changes, numbered `001_*` through `006_*`. Apply in numeric order. |
 | `database/seeds/sample_data.sql` | Test data: 6 users, 2 workspaces, 5 channels, 4 invitations, 9 messages |
 | `database/seeds/test_queries.sql` | Part c queries with concrete values substituted in |
 | `database/queries/queries.sql` | Parameterised `:name`-style versions of the Part c queries |
@@ -39,14 +39,30 @@ The three components are independent. For local development, run them in this or
 
 ### 1. Database
 
-The project targets a Supabase Postgres instance. To set up a fresh database, run in order:
+The default deployment is a local PostgreSQL instance on the demo laptop. The same SQL also runs unchanged on a Supabase-hosted instance if a remote backend is preferred.
+
+Set up a fresh local database:
 
 ```bash
-psql "$DATABASE_URL" -f database/schema/schema.sql
-psql "$DATABASE_URL" -f database/migrations/001_widen_password.sql
-psql "$DATABASE_URL" -f database/migrations/002_stored_procedures.sql
-psql "$DATABASE_URL" -f database/migrations/003_message_time_eastern.sql
-psql "$DATABASE_URL" -f database/seeds/sample_data.sql   # optional, loads test data
+createdb snickr
+psql -d snickr -f database/schema/schema.sql
+psql -d snickr -f database/migrations/001_widen_password.sql
+psql -d snickr -f database/migrations/002_stored_procedures.sql
+psql -d snickr -f database/migrations/003_message_time_eastern.sql
+psql -d snickr -f database/migrations/004_mentions.sql
+psql -d snickr -f database/migrations/005_message_edit.sql
+psql -d snickr -f database/migrations/006_message_system_kind.sql
+psql -d snickr -f database/seeds/sample_data.sql   # optional, loads test data and seeds lookup tables
+```
+
+Migrations must be applied in numeric order. Each one is idempotent so re-running is safe.
+
+If `sample_data.sql` is skipped, seed the lookup tables manually:
+
+```sql
+INSERT INTO roles (name) VALUES ('admin'), ('member');
+INSERT INTO status (type) VALUES ('pending'), ('accepted'), ('declined');
+INSERT INTO channeltype (name) VALUES ('public'), ('private'), ('direct');
 ```
 
 ### 2. Backend on port 8000
@@ -95,7 +111,7 @@ pytest
 
 | Layer | Stack |
 |---|---|
-| Database | PostgreSQL on Supabase |
+| Database | PostgreSQL, run locally for the demo or on Supabase as a remote alternative |
 | Backend | FastAPI, asyncpg, Pydantic, bcrypt, Starlette `SessionMiddleware` |
 | Frontend | Vite, React, TypeScript, TailwindCSS |
 
@@ -103,6 +119,6 @@ pytest
 
 - Schema overview, ER diagram, and design rationale: `docs/report/snickr-part1.pdf`
 - Backend layout and conventions: `backend/README.md`
-- Backend endpoints, stored procedures, transactions, security: `backend/SNICKR_BACKEND_DESIGN.md`
+- Database and backend design, endpoints, stored procedures, transactions, security: `docs/report/snickr-part2.md`
 - Frontend run instructions: `frontend/how-to-run.md`
 - Frontend routes, page and API mapping, visual style: `frontend/SNICKR_FRONTEND_DESIGN.md`

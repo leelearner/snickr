@@ -28,7 +28,8 @@ async def test_post_and_list_messages(make_client, uid):
     await bob.post(f"/api/channels/{ch_id}/messages", json={"content": "second"})
 
     msgs = (await alice.get(f"/api/channels/{ch_id}/messages")).json()
-    assert [m["content"] for m in msgs] == ["first", "second"]
+    user_msgs = [m for m in msgs if not m.get("systemKind")]
+    assert [m["content"] for m in user_msgs] == ["first", "second"]
 
 
 async def test_non_member_cannot_post_or_read(make_client, uid):
@@ -59,6 +60,84 @@ async def test_user_messages_list(make_client, uid):
     contents = {m["content"] for m in msgs}
     assert "hello world" in contents
     assert "another one" in contents
+
+
+async def test_owner_can_edit_message(make_client, uid):
+    alice, _, _, _, _, ch_id = await _two_member_channel(make_client, uid)
+    posted = (await alice.post(f"/api/channels/{ch_id}/messages",
+                               json={"content": "first draft"})).json()
+    assert posted["editedTime"] is None
+
+    msg_id = posted["messageId"]
+    edited = (await alice.patch(
+        f"/api/channels/{ch_id}/messages/{msg_id}",
+        json={"content": "polished version"},
+    )).json()
+
+    assert edited["content"] == "polished version"
+    assert edited["editedTime"] is not None
+    assert edited["postedTime"] == posted["postedTime"]
+
+    listed = (await alice.get(f"/api/channels/{ch_id}/messages")).json()
+    only = next(m for m in listed if m["messageId"] == msg_id)
+    assert only["content"] == "polished version"
+    assert only["editedTime"] is not None
+
+
+async def test_other_users_cannot_edit(make_client, uid):
+    alice, bob, _, _, _, ch_id = await _two_member_channel(make_client, uid)
+    posted = (await alice.post(f"/api/channels/{ch_id}/messages",
+                               json={"content": "alice text"})).json()
+    msg_id = posted["messageId"]
+
+    r = await bob.patch(f"/api/channels/{ch_id}/messages/{msg_id}",
+                        json={"content": "bob attempt"})
+    assert r.status_code == 403
+
+
+async def test_edit_unknown_or_wrong_channel(make_client, uid):
+    alice, _, _, _, ws_id, ch_id = await _two_member_channel(make_client, uid)
+    other_ch = (await alice.post(f"/api/workspaces/{ws_id}/channels",
+                                 json={"channelName": "side", "type": "public"})).json()["channelId"]
+    posted = (await alice.post(f"/api/channels/{ch_id}/messages",
+                               json={"content": "hello"})).json()
+    msg_id = posted["messageId"]
+
+    # message exists but not in this channel
+    r = await alice.patch(f"/api/channels/{other_ch}/messages/{msg_id}",
+                          json={"content": "wrong route"})
+    assert r.status_code == 404
+
+    # totally unknown message
+    r = await alice.patch(f"/api/channels/{ch_id}/messages/999999999",
+                          json={"content": "ghost"})
+    assert r.status_code == 404
+
+
+async def test_owner_can_delete_message(make_client, uid):
+    alice, _, _, _, _, ch_id = await _two_member_channel(make_client, uid)
+    posted = (await alice.post(f"/api/channels/{ch_id}/messages",
+                               json={"content": "regrettable"})).json()
+    msg_id = posted["messageId"]
+
+    r = await alice.delete(f"/api/channels/{ch_id}/messages/{msg_id}")
+    assert r.status_code == 204
+
+    listed = (await alice.get(f"/api/channels/{ch_id}/messages")).json()
+    assert all(m["messageId"] != msg_id for m in listed)
+
+
+async def test_other_users_cannot_delete(make_client, uid):
+    alice, bob, _, _, _, ch_id = await _two_member_channel(make_client, uid)
+    posted = (await alice.post(f"/api/channels/{ch_id}/messages",
+                               json={"content": "stay"})).json()
+    msg_id = posted["messageId"]
+
+    r = await bob.delete(f"/api/channels/{ch_id}/messages/{msg_id}")
+    assert r.status_code == 403
+
+    listed = (await alice.get(f"/api/channels/{ch_id}/messages")).json()
+    assert any(m["messageId"] == msg_id for m in listed)
 
 
 async def test_search_respects_membership(make_client, uid):

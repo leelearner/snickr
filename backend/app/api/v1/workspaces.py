@@ -247,6 +247,18 @@ async def _admin_count(conn: asyncpg.Connection, workspace_id: int) -> int:
     ))
 
 
+@router.delete("/{workspace_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_workspace(
+    workspace_id: int,
+    user_id: int = Depends(current_user_id),
+    conn: asyncpg.Connection = Depends(get_conn),
+) -> None:
+    await _require_admin(conn, user_id, workspace_id)
+    result = await conn.execute("DELETE FROM workspaces WHERE workspaceID = $1", workspace_id)
+    if result == "DELETE 0":
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="workspace not found")
+
+
 @router.delete("/{workspace_id}/members/{target_user_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def remove_member(
     workspace_id: int,
@@ -254,7 +266,9 @@ async def remove_member(
     user_id: int = Depends(current_user_id),
     conn: asyncpg.Connection = Depends(get_conn),
 ) -> None:
-    await _require_admin(conn, user_id, workspace_id)
+    is_self = target_user_id == user_id
+    if not is_self:
+        await _require_admin(conn, user_id, workspace_id)
 
     target = await conn.fetchrow(
         """
@@ -269,7 +283,8 @@ async def remove_member(
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="user is not a member of this workspace")
 
     if target["role"] == "admin" and await _admin_count(conn, workspace_id) == 1:
-        raise HTTPException(status.HTTP_409_CONFLICT, detail="cannot remove the last admin")
+        detail = "cannot leave as the only admin; promote someone else first" if is_self else "cannot remove the last admin"
+        raise HTTPException(status.HTTP_409_CONFLICT, detail=detail)
 
     async with conn.transaction():
         await conn.execute(

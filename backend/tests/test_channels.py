@@ -107,3 +107,23 @@ async def test_channel_invite_accept_grants_visibility(make_client, uid):
     # bob can now see the private channel
     r = await bob.get(f"/api/channels/{priv_id}")
     assert r.status_code == 200
+
+
+async def test_leave_public_channel_drops_membership(make_client, uid):
+    alice, bob, _, b, ws_id = await _setup_workspace_with_member(make_client, uid)
+    pub_id = (await alice.post(f"/api/workspaces/{ws_id}/channels",
+                               json={"channelName": "public-room", "type": "public"})).json()["channelId"]
+    await bob.post(f"/api/channels/{pub_id}/join")
+
+    r = await bob.post(f"/api/channels/{pub_id}/leave")
+    assert r.status_code in (200, 204)
+    detail = (await alice.get(f"/api/channels/{pub_id}")).json()
+    assert b["userId"] not in {m["userId"] for m in detail["members"]}
+
+
+async def test_leave_dm_channel_rejected(make_client, uid):
+    alice, bob, _, b, ws_id = await _setup_workspace_with_member(make_client, uid)
+    dm_id = (await alice.post(f"/api/workspaces/{ws_id}/direct-messages",
+                              json={"targetUserId": b["userId"]})).json()["channelId"]
+    r = await alice.post(f"/api/channels/{dm_id}/leave")
+    assert r.status_code == 400

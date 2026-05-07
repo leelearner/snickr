@@ -234,6 +234,38 @@ async def get_channel(
     )
 
 
+@channels_router.post("/{channel_id}/leave", status_code=status.HTTP_204_NO_CONTENT)
+async def leave_channel(
+    channel_id: int,
+    user_id: int = Depends(current_user_id),
+    conn: asyncpg.Connection = Depends(get_conn),
+) -> None:
+    ch = await conn.fetchrow(
+        """
+        SELECT ct.name AS type
+          FROM channels c JOIN channeltype ct ON ct.typeID = c.typeID
+         WHERE c.channelID = $1
+        """,
+        channel_id,
+    )
+    if ch is None or not await _is_channel_member(conn, user_id, channel_id):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="channel not found")
+    if ch["type"] == "direct":
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="direct messages cannot be left; both sides stay forever")
+    async with conn.transaction():
+        await conn.execute(
+            """
+            INSERT INTO messages (channelID, content, posted_time, posted_by, system_kind)
+            VALUES ($1, 'left the channel', timezone('America/New_York', NOW()), $2, 'leave')
+            """,
+            channel_id, user_id,
+        )
+        await conn.execute(
+            "DELETE FROM channelmember WHERE channelID = $1 AND userID = $2",
+            channel_id, user_id,
+        )
+
+
 @channels_router.post("/{channel_id}/join")
 async def join_channel(
     channel_id: int,
@@ -242,7 +274,7 @@ async def join_channel(
 ) -> dict:
     ch = await conn.fetchrow(
         """
-        SELECT c.workspaceID, ct.name AS type
+        SELECT c.workspaceID, c.created_by, ct.name AS type
           FROM channels c JOIN channeltype ct ON ct.typeID = c.typeID
          WHERE c.channelID = $1
         """,
@@ -255,14 +287,35 @@ async def join_channel(
     if ch["type"] != "public":
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail="only public channels can be joined directly")
 
-    await conn.execute(
-        """
-        INSERT INTO channelmember (channelID, userID, joined_time)
-        VALUES ($1, $2, NOW())
-        ON CONFLICT (channelID, userID) DO NOTHING
-        """,
-        channel_id, user_id,
-    )
+    async with conn.transaction():
+        added = await conn.fetchval(
+            """
+            INSERT INTO channelmember (channelID, userID, joined_time)
+            VALUES ($1, $2, NOW())
+            ON CONFLICT (channelID, userID) DO NOTHING
+            RETURNING 1
+            """,
+            channel_id, user_id,
+        )
+        if added is not None:
+            join_msg_id = await conn.fetchval(
+                """
+                INSERT INTO messages (channelID, content, posted_time, posted_by, system_kind)
+                VALUES ($1, 'joined the channel', timezone('America/New_York', NOW()), $2, 'join')
+                RETURNING messageID
+                """,
+                channel_id, user_id,
+            )
+            creator_id = ch["created_by"]
+            if creator_id and creator_id != user_id:
+                await conn.execute(
+                    """
+                    INSERT INTO mentions (messageID, mentioned_user)
+                    VALUES ($1, $2)
+                    ON CONFLICT (messageID, mentioned_user) DO NOTHING
+                    """,
+                    join_msg_id, creator_id,
+                )
     return {"ok": True}
 
 

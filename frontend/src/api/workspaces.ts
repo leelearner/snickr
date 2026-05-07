@@ -27,6 +27,9 @@ export const workspaceApi = {
   get(workspaceId: number) {
     return apiRequest<WorkspaceDetail>(`/api/workspaces/${workspaceId}`);
   },
+  delete(workspaceId: number) {
+    return apiRequest<void>(`/api/workspaces/${workspaceId}`, { method: "DELETE" });
+  },
   inviteUser(workspaceId: number, payload: InviteUserPayload) {
     return apiRequest<{ invitationId: number }>(`/api/workspaces/${workspaceId}/invitations`, {
       method: "POST",

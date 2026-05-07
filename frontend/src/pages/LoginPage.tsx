@@ -36,7 +36,7 @@ export function LoginPage() {
   }
 
   return (
-    <AuthLayout title="Log in to Snickr" subtitle="Welcome back.">
+    <AuthLayout title="Log in" subtitle="Welcome back.">
       <form className="space-y-4" onSubmit={submit}>
         <Input label="Username" value={username} maxLength={30} onChange={(event) => setUsername(event.target.value)} />
         <Input label="Password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} />

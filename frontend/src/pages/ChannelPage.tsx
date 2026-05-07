@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { useParams } from "react-router-dom";
-import { Hash, Lock, MessageSquare, UserPlus, Users } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useNavigate, useParams } from "react-router-dom";
+import { Hash, LogOut, Lock, MessageSquare, UserPlus, Users } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { channelApi } from "../api/channels";
 import { messageApi } from "../api/messages";
 import { useAuth } from "../context/AuthContext";
+import { errorMessage } from "../utils/format";
 import { ErrorState } from "../components/common/ErrorState";
 import { LoadingSpinner } from "../components/common/LoadingSpinner";
 import { ChannelMembersPanel } from "../components/channels/ChannelMembersPanel";
@@ -18,9 +19,20 @@ export function ChannelPage() {
   const { channelId, workspaceId } = useParams();
   const numericChannelId = Number(channelId);
   const numericWorkspaceId = Number(workspaceId);
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { user } = useAuth();
   const [inviteOpen, setInviteOpen] = useState(false);
   const [membersPanelOpen, setMembersPanelOpen] = useState(false);
+  const [leaveError, setLeaveError] = useState("");
+  const leaveMutation = useMutation({
+    mutationFn: () => channelApi.leave(numericChannelId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.channels(numericWorkspaceId) });
+      navigate(`/app/workspaces/${numericWorkspaceId}`);
+    },
+    onError: (err) => setLeaveError(errorMessage(err)),
+  });
   const channelQuery = useQuery({
     queryKey: queryKeys.channel(numericChannelId),
     queryFn: () => channelApi.get(numericChannelId),
@@ -73,11 +85,29 @@ export function ChannelPage() {
               <UserPlus className="h-4 w-4" />
             </button>
           ) : null}
+          {channel.isMember && channel.type !== "direct" ? (
+            <button
+              className="rounded-md p-1.5 text-slate-600 hover:bg-red-50 hover:text-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 disabled:cursor-not-allowed disabled:opacity-50"
+              onClick={() => {
+                setLeaveError("");
+                if (window.confirm(`Leave #${channel.channelName}?`)) {
+                  leaveMutation.mutate();
+                }
+              }}
+              disabled={leaveMutation.isPending}
+              title="Leave channel"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
+          ) : null}
           {!channel.isMember && channel.type === "public" ? (
             <JoinChannelButton channelId={channel.channelId} workspaceId={numericWorkspaceId} />
           ) : null}
         </div>
       </div>
+      {leaveError ? (
+        <p className="border-b border-red-100 bg-red-50 px-4 py-2 text-sm text-red-700">{leaveError}</p>
+      ) : null}
       <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
         <div className="flex min-h-0 flex-1 flex-col">
           <div className="min-h-0 flex-1 overflow-auto">
@@ -88,10 +118,19 @@ export function ChannelPage() {
             ) : messagesQuery.error ? (
               <div className="p-5"><ErrorState error={messagesQuery.error} /></div>
             ) : (
-              <MessageList messages={messagesQuery.data ?? []} />
+              <MessageList
+                messages={messagesQuery.data ?? []}
+                channelId={channel.channelId}
+                workspaceId={channel.workspaceId}
+                members={channel.members}
+              />
             )}
           </div>
-          <MessageComposer channelId={channel.channelId} disabled={!channel.isMember} />
+          <MessageComposer
+            channelId={channel.channelId}
+            disabled={!channel.isMember}
+            members={channel.members}
+          />
         </div>
         {membersPanelOpen ? (
           <ChannelMembersPanel

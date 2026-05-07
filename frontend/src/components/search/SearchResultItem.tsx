@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import type { SearchResult } from "../../types/api";
 import { formatDate } from "../../utils/format";
+import { renderMessageContent } from "../../utils/renderContent";
 
 export function SearchResultItem({ result }: { result: SearchResult }) {
   return (
@@ -17,7 +18,7 @@ export function SearchResultItem({ result }: { result: SearchResult }) {
         <time className="text-slate-400">{formatDate(result.postedTime)}</time>
       </div>
       <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-slate-800">
-        {result.content}
+        {renderMessageContent(result.content)}
       </p>
     </Link>
   );

@@ -14,7 +14,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         min_size=1,
         max_size=10,
         # 0 disables asyncpg's per-connection prepared-statement cache so the
-        # same SQL can be re-issued through Supabase's pooler without name clashes.
+        # same SQL can be re-issued cleanly through a connection pooler such
+        # as Supabase's session pooler. Harmless when running on local Postgres.
         statement_cache_size=0,
     )
     try:

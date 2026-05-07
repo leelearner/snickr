@@ -9,7 +9,7 @@ The React frontend lives in the sibling `../frontend/` directory.
 ```bash
 cd backend
 cp .env.example .env
-# edit .env: paste the Supabase DATABASE_URL and a random SESSION_SECRET
+# edit .env: set DATABASE_URL (local Postgres by default) and a random SESSION_SECRET
 
 conda create -n snickr python=3.11 -y
 conda activate snickr

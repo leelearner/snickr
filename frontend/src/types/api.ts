@@ -76,10 +76,14 @@ export interface ChannelMember {
   joinedTime: string;
 }
 
+export type SystemKind = "join" | "leave";
+
 export interface MessageOut {
   messageId: number;
   content: string;
   postedTime: string;
+  editedTime: string | null;
+  systemKind: SystemKind | null;
   postedBy: number;
   postedByUsername: string;
   postedByNickname: string | null;
@@ -89,6 +93,8 @@ export interface UserMessage {
   messageId: number;
   content: string;
   postedTime: string;
+  editedTime: string | null;
+  systemKind: SystemKind | null;
   workspaceId: number;
   workspaceName: string;
   channelId: number;
@@ -99,6 +105,24 @@ export interface UserMessage {
 }
 
 export type SearchResult = UserMessage;
+
+export type MentionKind = "mention" | "dm" | "join";
+
+export interface MentionOut {
+  mentionId: number;
+  messageId: number;
+  content: string;
+  postedTime: string;
+  workspaceId: number;
+  workspaceName: string;
+  channelId: number;
+  channelName: string;
+  channelType: ChannelType;
+  kind: MentionKind;
+  postedBy: number;
+  postedByUsername: string;
+  postedByNickname: string | null;
+}
 
 export interface WorkspaceInvitation {
   invitationId: number;
