@@ -1,10 +1,12 @@
 from datetime import datetime
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field, StringConstraints
+from pydantic import BaseModel, StringConstraints
 
 
-WorkspaceName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=30)]
+WorkspaceName = Annotated[
+    str, StringConstraints(strip_whitespace=True, min_length=1, max_length=30)
+]
 WorkspaceDescription = Annotated[str, StringConstraints(strip_whitespace=True, max_length=200)]
 Username = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=30)]
 

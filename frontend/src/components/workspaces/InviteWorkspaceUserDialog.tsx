@@ -1,11 +1,11 @@
-import { FormEvent, useState } from "react";
-import { Check, UserPlus } from "lucide-react";
-import { useMutation } from "@tanstack/react-query";
-import { workspaceApi } from "../../api/workspaces";
-import { Button } from "../common/Button";
-import { Input } from "../common/Input";
-import { Modal } from "../common/Modal";
-import { errorMessage } from "../../utils/format";
+import { FormEvent, useState } from 'react';
+import { Check, UserPlus } from 'lucide-react';
+import { useMutation } from '@tanstack/react-query';
+import { workspaceApi } from '../../api/workspaces';
+import { Button } from '../common/Button';
+import { Input } from '../common/Input';
+import { Modal } from '../common/Modal';
+import { errorMessage } from '../../utils/format';
 
 export function InviteWorkspaceUserDialog({
   workspaceId,
@@ -16,15 +16,15 @@ export function InviteWorkspaceUserDialog({
   open: boolean;
   onClose: () => void;
 }) {
-  const [username, setUsername] = useState("");
-  const [validation, setValidation] = useState("");
+  const [username, setUsername] = useState('');
+  const [validation, setValidation] = useState('');
   const [lastInvited, setLastInvited] = useState<string | null>(null);
   const mutation = useMutation({
     mutationFn: (trimmed: string) => workspaceApi.inviteUser(workspaceId, { username: trimmed }),
     onSuccess: (_data, trimmed) => {
       setLastInvited(trimmed);
-      setUsername("");
-      setValidation("");
+      setUsername('');
+      setValidation('');
     },
   });
 
@@ -32,17 +32,17 @@ export function InviteWorkspaceUserDialog({
     event.preventDefault();
     const trimmed = username.trim();
     if (!trimmed || trimmed.length > 30) {
-      setValidation("Username must be 1 to 30 characters.");
+      setValidation('Username must be 1 to 30 characters.');
       return;
     }
-    setValidation("");
+    setValidation('');
     setLastInvited(null);
     mutation.mutate(trimmed);
   }
 
   function handleClose() {
     setLastInvited(null);
-    setValidation("");
+    setValidation('');
     onClose();
   }
 
@@ -53,7 +53,8 @@ export function InviteWorkspaceUserDialog({
           <UserPlus className="h-4 w-4" />
         </div>
         <p className="text-sm text-slate-600">
-          Send a workspace invitation by username. The recipient will see it in their Activity inbox and can accept or decline.
+          Send a workspace invitation by username. The recipient will see it in their Activity inbox
+          and can accept or decline.
         </p>
       </div>
       <form className="space-y-4" onSubmit={submit}>

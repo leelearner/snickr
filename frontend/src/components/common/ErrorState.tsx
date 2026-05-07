@@ -1,7 +1,13 @@
-import { AlertCircle } from "lucide-react";
-import { errorMessage } from "../../utils/format";
+import { AlertCircle } from 'lucide-react';
+import { errorMessage } from '../../utils/format';
 
-export function ErrorState({ error, title = "Unable to load" }: { error: unknown; title?: string }) {
+export function ErrorState({
+  error,
+  title = 'Unable to load',
+}: {
+  error: unknown;
+  title?: string;
+}) {
   return (
     <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
       <div className="flex items-start gap-2">

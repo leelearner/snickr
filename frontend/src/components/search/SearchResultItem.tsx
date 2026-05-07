@@ -1,7 +1,7 @@
-import { Link } from "react-router-dom";
-import type { SearchResult } from "../../types/api";
-import { formatDate } from "../../utils/format";
-import { renderMessageContent } from "../../utils/renderContent";
+import { Link } from 'react-router-dom';
+import type { SearchResult } from '../../types/api';
+import { formatDate } from '../../utils/format';
+import { renderMessageContent } from '../../utils/renderContent';
 
 export function SearchResultItem({ result }: { result: SearchResult }) {
   return (

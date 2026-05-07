@@ -9,7 +9,9 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field, StringConstraints, 
 # matches what the @-mention parser is willing to address.
 Username = Annotated[
     str,
-    StringConstraints(strip_whitespace=True, min_length=1, max_length=30, pattern=r"^[A-Za-z0-9_.]+$"),
+    StringConstraints(
+        strip_whitespace=True, min_length=1, max_length=30, pattern=r"^[A-Za-z0-9_.]+$"
+    ),
 ]
 # Nicknames are free-form display names but cannot contain angle brackets, so
 # users can't register with HTML-looking values like <img onerror=...>.

@@ -1,8 +1,8 @@
-import { Fragment, useEffect, useRef } from "react";
-import type { ChannelMember, MessageOut } from "../../types/api";
-import { dateKey, formatDateDivider } from "../../utils/format";
-import { EmptyState } from "../common/EmptyState";
-import { MessageItem } from "./MessageItem";
+import { Fragment, useEffect, useRef } from 'react';
+import type { ChannelMember, MessageOut } from '../../types/api';
+import { dateKey, formatDateDivider } from '../../utils/format';
+import { EmptyState } from '../common/EmptyState';
+import { MessageItem } from './MessageItem';
 
 const FIVE_MINUTES_MS = 5 * 60 * 1000;
 
@@ -29,13 +29,16 @@ export function MessageList({
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ block: "end" });
+    bottomRef.current?.scrollIntoView({ block: 'end' });
   }, [messages.length]);
 
   if (messages.length === 0) {
     return (
       <div className="p-5">
-        <EmptyState title="No messages yet" description="Start the conversation with a short plain-text message." />
+        <EmptyState
+          title="No messages yet"
+          description="Start the conversation with a short plain-text message."
+        />
       </div>
     );
   }

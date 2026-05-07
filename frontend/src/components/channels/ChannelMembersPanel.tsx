@@ -1,12 +1,12 @@
-import { useState } from "react";
-import { MessageSquare, X } from "lucide-react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
-import { channelApi } from "../../api/channels";
-import type { ChannelMember } from "../../types/api";
-import { queryKeys } from "../../utils/queryKeys";
-import { Avatar } from "../common/Avatar";
-import { displayName as safeDisplayName } from "../../utils/displayName";
+import { useState } from 'react';
+import { MessageSquare, X } from 'lucide-react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
+import { channelApi } from '../../api/channels';
+import type { ChannelMember } from '../../types/api';
+import { queryKeys } from '../../utils/queryKeys';
+import { Avatar } from '../common/Avatar';
+import { displayName as safeDisplayName } from '../../utils/displayName';
 
 interface ChannelMembersPanelProps {
   members: ChannelMember[];
@@ -63,7 +63,9 @@ export function ChannelMembersPanel({
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm text-slate-800">
                   {displayName}
-                  {isCurrentUser ? <span className="ml-1 text-xs text-slate-500">(you)</span> : null}
+                  {isCurrentUser ? (
+                    <span className="ml-1 text-xs text-slate-500">(you)</span>
+                  ) : null}
                 </p>
               </div>
               {!isCurrentUser ? (

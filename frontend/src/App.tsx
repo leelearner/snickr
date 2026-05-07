@@ -1,18 +1,18 @@
-import { Navigate, Route, Routes } from "react-router-dom";
-import { ProtectedRoute } from "./components/auth/ProtectedRoute";
-import { AppShell } from "./components/layout/AppShell";
-import { EmptyState } from "./components/common/EmptyState";
-import { LoginPage } from "./pages/LoginPage";
-import { RegisterPage } from "./pages/RegisterPage";
-import { WorkspaceListPage } from "./pages/WorkspaceListPage";
-import { WorkspaceHomePage } from "./pages/WorkspaceHomePage";
-import { ChannelPage } from "./pages/ChannelPage";
-import { WorkspaceMembersPage } from "./pages/WorkspaceMembersPage";
-import { InvitationsPage } from "./pages/InvitationsPage";
-import { SearchPage } from "./pages/SearchPage";
-import { ProfilePage } from "./pages/ProfilePage";
-import { UserMessagesPage } from "./pages/UserMessagesPage";
-import { WorkspaceAdminsPage } from "./pages/WorkspaceAdminsPage";
+import { Navigate, Route, Routes } from 'react-router-dom';
+import { ProtectedRoute } from './components/auth/ProtectedRoute';
+import { AppShell } from './components/layout/AppShell';
+import { EmptyState } from './components/common/EmptyState';
+import { LoginPage } from './pages/LoginPage';
+import { RegisterPage } from './pages/RegisterPage';
+import { WorkspaceListPage } from './pages/WorkspaceListPage';
+import { WorkspaceHomePage } from './pages/WorkspaceHomePage';
+import { ChannelPage } from './pages/ChannelPage';
+import { WorkspaceMembersPage } from './pages/WorkspaceMembersPage';
+import { InvitationsPage } from './pages/InvitationsPage';
+import { SearchPage } from './pages/SearchPage';
+import { ProfilePage } from './pages/ProfilePage';
+import { UserMessagesPage } from './pages/UserMessagesPage';
+import { WorkspaceAdminsPage } from './pages/WorkspaceAdminsPage';
 
 function NotFoundPage() {
   return (

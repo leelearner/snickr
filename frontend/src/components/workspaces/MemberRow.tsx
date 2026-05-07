@@ -1,15 +1,15 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Link, useNavigate } from "react-router-dom";
-import { MessageSquare, Trash2 } from "lucide-react";
-import type { WorkspaceMember } from "../../types/api";
-import { formatDate } from "../../utils/format";
-import { displayName as safeDisplayName } from "../../utils/displayName";
-import { queryKeys } from "../../utils/queryKeys";
-import { channelApi } from "../../api/channels";
-import { workspaceApi } from "../../api/workspaces";
-import { Avatar } from "../common/Avatar";
-import { Badge } from "../common/Badge";
-import { Button } from "../common/Button";
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { Link, useNavigate } from 'react-router-dom';
+import { MessageSquare, Trash2 } from 'lucide-react';
+import type { WorkspaceMember } from '../../types/api';
+import { formatDate } from '../../utils/format';
+import { displayName as safeDisplayName } from '../../utils/displayName';
+import { queryKeys } from '../../utils/queryKeys';
+import { channelApi } from '../../api/channels';
+import { workspaceApi } from '../../api/workspaces';
+import { Avatar } from '../common/Avatar';
+import { Badge } from '../common/Badge';
+import { Button } from '../common/Button';
 
 export function MemberRow({
   member,
@@ -24,11 +24,12 @@ export function MemberRow({
 }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: queryKeys.workspace(workspaceId) });
+  const invalidate = () =>
+    queryClient.invalidateQueries({ queryKey: queryKeys.workspace(workspaceId) });
   const roleMutation = useMutation({
     mutationFn: () =>
       workspaceApi.updateMemberRole(workspaceId, member.userId, {
-        role: member.role === "admin" ? "member" : "admin",
+        role: member.role === 'admin' ? 'member' : 'admin',
       }),
     onSuccess: invalidate,
   });
@@ -60,7 +61,7 @@ export function MemberRow({
             >
               {safeDisplayName(member.nickname, member.username)}
             </Link>
-            {member.role === "admin" ? <Badge tone="blue">admin</Badge> : null}
+            {member.role === 'admin' ? <Badge tone="blue">admin</Badge> : null}
             {isSelf ? <span className="text-xs text-slate-400">(you)</span> : null}
           </div>
           <p className="truncate text-xs text-slate-500">
@@ -90,7 +91,7 @@ export function MemberRow({
                 isLoading={roleMutation.isPending}
                 onClick={() => roleMutation.mutate()}
               >
-                {member.role === "admin" ? "Demote" : "Promote"}
+                {member.role === 'admin' ? 'Demote' : 'Promote'}
               </Button>
               <Button
                 variant="ghost"
@@ -105,9 +106,7 @@ export function MemberRow({
           ) : null}
         </div>
       ) : null}
-      {error ? (
-        <p className="col-span-2 text-sm text-red-600">{(error as Error).message}</p>
-      ) : null}
+      {error ? <p className="col-span-2 text-sm text-red-600">{(error as Error).message}</p> : null}
     </div>
   );
 }

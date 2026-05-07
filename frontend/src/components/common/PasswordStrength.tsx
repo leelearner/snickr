@@ -5,7 +5,7 @@ interface Result {
 }
 
 function score(password: string): Result {
-  if (!password) return { score: 0, label: "", color: "bg-slate-200" };
+  if (!password) return { score: 0, label: '', color: 'bg-slate-200' };
   let s = 0;
   if (password.length >= 8) s++;
   if (password.length >= 12) s++;
@@ -15,9 +15,9 @@ function score(password: string): Result {
   if (s > 4) s = 4;
   if (password.length < 6) s = 1;
 
-  const colors = ["bg-slate-200", "bg-red-500", "bg-orange-500", "bg-yellow-500", "bg-emerald-500"];
-  const labels = ["", "Weak", "Fair", "Good", "Strong"];
-  return { score: s as Result["score"], label: labels[s], color: colors[s] };
+  const colors = ['bg-slate-200', 'bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-emerald-500'];
+  const labels = ['', 'Weak', 'Fair', 'Good', 'Strong'];
+  return { score: s as Result['score'], label: labels[s], color: colors[s] };
 }
 
 export function PasswordStrength({ password }: { password: string }) {
@@ -30,7 +30,7 @@ export function PasswordStrength({ password }: { password: string }) {
         {[1, 2, 3, 4].map((i) => (
           <div
             key={i}
-            className={`h-1 flex-1 rounded-full ${i <= result.score ? result.color : "bg-slate-200"}`}
+            className={`h-1 flex-1 rounded-full ${i <= result.score ? result.color : 'bg-slate-200'}`}
           />
         ))}
       </div>

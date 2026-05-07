@@ -1,4 +1,4 @@
-import { apiRequest } from "./http";
+import { apiRequest } from './http';
 import type {
   ChannelCreatePayload,
   ChannelDetail,
@@ -7,7 +7,7 @@ import type {
   DirectMessageCreatePayload,
   InviteResponsePayload,
   InviteUserPayload,
-} from "../types/api";
+} from '../types/api';
 
 export const channelApi = {
   list(workspaceId: number) {
@@ -15,13 +15,13 @@ export const channelApi = {
   },
   create(workspaceId: number, payload: ChannelCreatePayload) {
     return apiRequest<ChannelSummary>(`/api/workspaces/${workspaceId}/channels`, {
-      method: "POST",
+      method: 'POST',
       body: payload,
     });
   },
   createDirectMessage(workspaceId: number, payload: DirectMessageCreatePayload) {
     return apiRequest<ChannelSummary>(`/api/workspaces/${workspaceId}/direct-messages`, {
-      method: "POST",
+      method: 'POST',
       body: payload,
     });
   },
@@ -30,27 +30,27 @@ export const channelApi = {
   },
   join(channelId: number) {
     return apiRequest<{ ok: boolean }>(`/api/channels/${channelId}/join`, {
-      method: "POST",
+      method: 'POST',
     });
   },
   leave(channelId: number) {
     return apiRequest<void>(`/api/channels/${channelId}/leave`, {
-      method: "POST",
+      method: 'POST',
     });
   },
   inviteUser(channelId: number, payload: InviteUserPayload) {
     return apiRequest<{ invitationId: number }>(`/api/channels/${channelId}/invitations`, {
-      method: "POST",
+      method: 'POST',
       body: payload,
     });
   },
   listMyInvitations() {
-    return apiRequest<ChannelInvitation[]>("/api/me/channel-invitations");
+    return apiRequest<ChannelInvitation[]>('/api/me/channel-invitations');
   },
   respondToInvitation(invitationId: number, payload: InviteResponsePayload) {
     return apiRequest<{ ok: boolean; status: string }>(
       `/api/me/channel-invitations/${invitationId}`,
-      { method: "POST", body: payload },
+      { method: 'POST', body: payload },
     );
   },
 };

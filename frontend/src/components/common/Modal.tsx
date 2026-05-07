@@ -1,6 +1,6 @@
-import { useEffect, type ReactNode } from "react";
-import { X } from "lucide-react";
-import { Button } from "./Button";
+import { useEffect, type ReactNode } from 'react';
+import { X } from 'lucide-react';
+import { Button } from './Button';
 
 interface ModalProps {
   open: boolean;
@@ -13,13 +13,13 @@ export function Modal({ open, title, children, onClose }: ModalProps) {
   useEffect(() => {
     if (!open) return;
     function handleKey(event: KeyboardEvent) {
-      if (event.key === "Escape") {
+      if (event.key === 'Escape') {
         event.stopPropagation();
         onClose();
       }
     }
-    window.addEventListener("keydown", handleKey);
-    return () => window.removeEventListener("keydown", handleKey);
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
   }, [open, onClose]);
 
   if (!open) return null;

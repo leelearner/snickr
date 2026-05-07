@@ -28,7 +28,10 @@ async def register(
                       nickname,
                       created_time AS "createdTime"
             """,
-            body.email, body.username, body.nickname, pw_hash,
+            body.email,
+            body.username,
+            body.nickname,
+            pw_hash,
         )
     except asyncpg.UniqueViolationError:
         raise HTTPException(status.HTTP_409_CONFLICT, detail="email or username already in use")
@@ -105,7 +108,9 @@ async def update_me(
     new_pw_hash: str | None = None
     if body.newPassword is not None:
         if body.currentPassword is None:
-            raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="currentPassword is required to change password")
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST, detail="currentPassword is required to change password"
+            )
         stored = await conn.fetchval("SELECT password FROM users WHERE userID = $1", user_id)
         if not verify_password(body.currentPassword, stored or ""):
             raise HTTPException(status.HTTP_403_FORBIDDEN, detail="currentPassword is incorrect")
@@ -126,7 +131,10 @@ async def update_me(
                       nickname,
                       created_time AS "createdTime"
             """,
-            body.email, body.nickname, new_pw_hash, user_id,
+            body.email,
+            body.nickname,
+            new_pw_hash,
+            user_id,
         )
     except asyncpg.UniqueViolationError:
         raise HTTPException(status.HTTP_409_CONFLICT, detail="email already in use")

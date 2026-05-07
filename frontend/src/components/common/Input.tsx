@@ -1,5 +1,5 @@
-import { useId, useState, type InputHTMLAttributes } from "react";
-import { Eye, EyeOff } from "lucide-react";
+import { useId, useState, type InputHTMLAttributes } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
@@ -7,12 +7,12 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   optional?: boolean;
 }
 
-export function Input({ label, error, optional, className = "", id, type, ...props }: InputProps) {
+export function Input({ label, error, optional, className = '', id, type, ...props }: InputProps) {
   const generatedId = useId();
   const inputId = id ?? props.name ?? generatedId;
-  const isPassword = type === "password";
+  const isPassword = type === 'password';
   const [revealed, setRevealed] = useState(false);
-  const effectiveType = isPassword && revealed ? "text" : type;
+  const effectiveType = isPassword && revealed ? 'text' : type;
 
   return (
     <div className="block">
@@ -22,11 +22,11 @@ export function Input({ label, error, optional, className = "", id, type, ...pro
           {optional ? <span className="ml-1 font-normal text-slate-400">(optional)</span> : null}
         </label>
       ) : null}
-      <div className={isPassword ? "relative" : undefined}>
+      <div className={isPassword ? 'relative' : undefined}>
         <input
           id={inputId}
           type={effectiveType}
-          className={`h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-slate-500 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:bg-slate-100 ${isPassword ? "pr-10" : ""} ${className}`}
+          className={`h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-slate-500 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:bg-slate-100 ${isPassword ? 'pr-10' : ''} ${className}`}
           {...props}
         />
         {isPassword ? (
@@ -34,7 +34,7 @@ export function Input({ label, error, optional, className = "", id, type, ...pro
             type="button"
             tabIndex={-1}
             onClick={() => setRevealed((v) => !v)}
-            title={revealed ? "Hide password" : "Show password"}
+            title={revealed ? 'Hide password' : 'Show password'}
             className="absolute right-1.5 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
           >
             {revealed ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}

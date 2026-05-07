@@ -31,7 +31,8 @@ async def insert_mentions_for_message(
          WHERE u.username = ANY($1::text[])
            AND cm.channelID = $2
         """,
-        handles, channel_id,
+        handles,
+        channel_id,
     )
     if not rows:
         return

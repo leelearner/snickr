@@ -1,27 +1,11 @@
-import {
-  createContext,
-  useEffect,
-  useCallback,
-  useContext,
-  useMemo,
-  type ReactNode,
-} from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { authApi } from "../api/auth";
-import type { ApiError, UserOut } from "../types/api";
-import { queryKeys } from "../utils/queryKeys";
+import { useEffect, useCallback, useMemo, type ReactNode } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { authApi } from '../api/auth';
+import type { ApiError, UserOut } from '../types/api';
+import { queryKeys } from '../utils/queryKeys';
+import { AuthContext, type AuthContextValue } from './useAuth';
 
-interface AuthContextValue {
-  user: UserOut | null;
-  isLoading: boolean;
-  isAuthenticated: boolean;
-  refreshAuth: () => Promise<void>;
-  setAuthUser: (user: UserOut | null) => void;
-  logout: () => Promise<void>;
-}
-
-const AuthContext = createContext<AuthContextValue | null>(null);
-const AUTH_CHANNEL_NAME = "snickr-auth";
+const AUTH_CHANNEL_NAME = 'snickr-auth';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
@@ -43,7 +27,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     (user: UserOut | null) => {
       queryClient.setQueryData(queryKeys.me, user);
       const channel = new BroadcastChannel(AUTH_CHANNEL_NAME);
-      channel.postMessage({ type: "auth-changed" });
+      channel.postMessage({ type: 'auth-changed' });
       channel.close();
     },
     [queryClient],
@@ -56,7 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const channel = new BroadcastChannel(AUTH_CHANNEL_NAME);
     channel.onmessage = (event) => {
-      if (event.data?.type === "auth-changed") {
+      if (event.data?.type === 'auth-changed') {
         void queryClient.invalidateQueries();
       }
     };
@@ -84,10 +68,4 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
-
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (!context) throw new Error("useAuth must be used inside AuthProvider");
-  return context;
 }

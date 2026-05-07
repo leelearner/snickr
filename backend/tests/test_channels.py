@@ -24,8 +24,9 @@ async def test_create_channel_via_sp_succeeds_for_member(make_client, uid):
     await register(alice, uid + "a")
     ws_id = (await alice.post("/api/workspaces", json={"name": f"ws_{uid}"})).json()["workspaceId"]
 
-    r = await alice.post(f"/api/workspaces/{ws_id}/channels",
-                         json={"channelName": "project", "type": "public"})
+    r = await alice.post(
+        f"/api/workspaces/{ws_id}/channels", json={"channelName": "project", "type": "public"}
+    )
     assert r.status_code == 201
     assert r.json()["isMember"] is True
 
@@ -38,8 +39,9 @@ async def test_create_channel_rejects_non_member(make_client, uid):
     await register(bob, uid + "b")
     ws_id = (await alice.post("/api/workspaces", json={"name": f"ws_{uid}"})).json()["workspaceId"]
 
-    r = await bob.post(f"/api/workspaces/{ws_id}/channels",
-                       json={"channelName": "x", "type": "public"})
+    r = await bob.post(
+        f"/api/workspaces/{ws_id}/channels", json={"channelName": "x", "type": "public"}
+    )
     assert r.status_code == 403
 
 
@@ -47,18 +49,29 @@ async def test_create_channel_duplicate_name_returns_409(make_client, uid):
     alice = await make_client()
     await register(alice, uid + "a")
     ws_id = (await alice.post("/api/workspaces", json={"name": f"ws_{uid}"})).json()["workspaceId"]
-    await alice.post(f"/api/workspaces/{ws_id}/channels", json={"channelName": "x", "type": "public"})
-    r = await alice.post(f"/api/workspaces/{ws_id}/channels", json={"channelName": "x", "type": "public"})
+    await alice.post(
+        f"/api/workspaces/{ws_id}/channels", json={"channelName": "x", "type": "public"}
+    )
+    r = await alice.post(
+        f"/api/workspaces/{ws_id}/channels", json={"channelName": "x", "type": "public"}
+    )
     assert r.status_code == 409
 
 
 async def test_private_channel_hidden_from_non_member(make_client, uid):
     alice, bob, _, _, ws_id = await _setup_workspace_with_member(make_client, uid)
 
-    pub_id = (await alice.post(f"/api/workspaces/{ws_id}/channels",
-                               json={"channelName": "public-room", "type": "public"})).json()["channelId"]
-    priv_id = (await alice.post(f"/api/workspaces/{ws_id}/channels",
-                                json={"channelName": "exec", "type": "private"})).json()["channelId"]
+    pub_id = (
+        await alice.post(
+            f"/api/workspaces/{ws_id}/channels",
+            json={"channelName": "public-room", "type": "public"},
+        )
+    ).json()["channelId"]
+    priv_id = (
+        await alice.post(
+            f"/api/workspaces/{ws_id}/channels", json={"channelName": "exec", "type": "private"}
+        )
+    ).json()["channelId"]
 
     bob_list = (await bob.get(f"/api/workspaces/{ws_id}/channels")).json()
     ids = {c["channelId"] for c in bob_list}
@@ -72,8 +85,12 @@ async def test_private_channel_hidden_from_non_member(make_client, uid):
 
 async def test_join_public_channel(make_client, uid):
     alice, bob, _, b, ws_id = await _setup_workspace_with_member(make_client, uid)
-    pub_id = (await alice.post(f"/api/workspaces/{ws_id}/channels",
-                               json={"channelName": "public-room", "type": "public"})).json()["channelId"]
+    pub_id = (
+        await alice.post(
+            f"/api/workspaces/{ws_id}/channels",
+            json={"channelName": "public-room", "type": "public"},
+        )
+    ).json()["channelId"]
 
     r = await bob.post(f"/api/channels/{pub_id}/join")
     assert r.status_code == 200
@@ -84,16 +101,22 @@ async def test_join_public_channel(make_client, uid):
 
 async def test_join_private_channel_rejected(make_client, uid):
     alice, bob, _, _, ws_id = await _setup_workspace_with_member(make_client, uid)
-    priv_id = (await alice.post(f"/api/workspaces/{ws_id}/channels",
-                                json={"channelName": "exec", "type": "private"})).json()["channelId"]
+    priv_id = (
+        await alice.post(
+            f"/api/workspaces/{ws_id}/channels", json={"channelName": "exec", "type": "private"}
+        )
+    ).json()["channelId"]
     r = await bob.post(f"/api/channels/{priv_id}/join")
     assert r.status_code in (403, 404)  # 404 if existence is hidden, 403 if rejected by type
 
 
 async def test_channel_invite_accept_grants_visibility(make_client, uid):
     alice, bob, _, b, ws_id = await _setup_workspace_with_member(make_client, uid)
-    priv_id = (await alice.post(f"/api/workspaces/{ws_id}/channels",
-                                json={"channelName": "exec", "type": "private"})).json()["channelId"]
+    priv_id = (
+        await alice.post(
+            f"/api/workspaces/{ws_id}/channels", json={"channelName": "exec", "type": "private"}
+        )
+    ).json()["channelId"]
 
     r = await alice.post(f"/api/channels/{priv_id}/invitations", json={"username": b["username"]})
     assert r.status_code == 201
@@ -111,8 +134,12 @@ async def test_channel_invite_accept_grants_visibility(make_client, uid):
 
 async def test_leave_public_channel_drops_membership(make_client, uid):
     alice, bob, _, b, ws_id = await _setup_workspace_with_member(make_client, uid)
-    pub_id = (await alice.post(f"/api/workspaces/{ws_id}/channels",
-                               json={"channelName": "public-room", "type": "public"})).json()["channelId"]
+    pub_id = (
+        await alice.post(
+            f"/api/workspaces/{ws_id}/channels",
+            json={"channelName": "public-room", "type": "public"},
+        )
+    ).json()["channelId"]
     await bob.post(f"/api/channels/{pub_id}/join")
 
     r = await bob.post(f"/api/channels/{pub_id}/leave")
@@ -123,8 +150,11 @@ async def test_leave_public_channel_drops_membership(make_client, uid):
 
 async def test_leave_dm_hides_from_list_but_keeps_history(make_client, uid):
     alice, bob, _, b, ws_id = await _setup_workspace_with_member(make_client, uid)
-    dm_id = (await alice.post(f"/api/workspaces/{ws_id}/direct-messages",
-                              json={"targetUserId": b["userId"]})).json()["channelId"]
+    dm_id = (
+        await alice.post(
+            f"/api/workspaces/{ws_id}/direct-messages", json={"targetUserId": b["userId"]}
+        )
+    ).json()["channelId"]
     await alice.post(f"/api/channels/{dm_id}/messages", json={"content": "hi"})
 
     # Alice dismisses the DM. The endpoint succeeds (no 400) and the DM disappears
@@ -145,8 +175,11 @@ async def test_leave_dm_hides_from_list_but_keeps_history(make_client, uid):
 
 async def test_dm_reappears_when_partner_sends_message(make_client, uid):
     alice, bob, _, b, ws_id = await _setup_workspace_with_member(make_client, uid)
-    dm_id = (await alice.post(f"/api/workspaces/{ws_id}/direct-messages",
-                              json={"targetUserId": b["userId"]})).json()["channelId"]
+    dm_id = (
+        await alice.post(
+            f"/api/workspaces/{ws_id}/direct-messages", json={"targetUserId": b["userId"]}
+        )
+    ).json()["channelId"]
     await alice.post(f"/api/channels/{dm_id}/leave")
 
     # Bob posts a fresh message; alice's hidden flag should clear automatically.
@@ -157,8 +190,11 @@ async def test_dm_reappears_when_partner_sends_message(make_client, uid):
 
 async def test_dm_reappears_when_alice_reopens(make_client, uid):
     alice, _, _, b, ws_id = await _setup_workspace_with_member(make_client, uid)
-    dm_id = (await alice.post(f"/api/workspaces/{ws_id}/direct-messages",
-                              json={"targetUserId": b["userId"]})).json()["channelId"]
+    dm_id = (
+        await alice.post(
+            f"/api/workspaces/{ws_id}/direct-messages", json={"targetUserId": b["userId"]}
+        )
+    ).json()["channelId"]
     await alice.post(f"/api/channels/{dm_id}/leave")
 
     # Reopening the DM through the same endpoint should bring it back.

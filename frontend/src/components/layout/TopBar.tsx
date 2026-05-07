@@ -1,24 +1,24 @@
-import { FormEvent, useState } from "react";
-import { LogOut, Search } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext";
-import { Avatar } from "../common/Avatar";
-import { displayName as safeDisplayName } from "../../utils/displayName";
+import { FormEvent, useState } from 'react';
+import { LogOut, Search } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/useAuth';
+import { Avatar } from '../common/Avatar';
+import { displayName as safeDisplayName } from '../../utils/displayName';
 
 export function TopBar() {
   const navigate = useNavigate();
   const { logout, user } = useAuth();
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState('');
 
   async function handleLogout() {
     await logout();
-    navigate("/login", { replace: true });
+    navigate('/login', { replace: true });
   }
 
   function submitSearch(event: FormEvent) {
     event.preventDefault();
     const q = search.trim();
-    navigate(q ? `/app/search?q=${encodeURIComponent(q)}` : "/app/search");
+    navigate(q ? `/app/search?q=${encodeURIComponent(q)}` : '/app/search');
   }
 
   return (

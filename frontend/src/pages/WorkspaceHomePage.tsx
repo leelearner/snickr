@@ -1,18 +1,18 @@
-import { useState } from "react";
-import { Link, useParams } from "react-router-dom";
-import { Hash, Lock, UserPlus, Users } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
-import { workspaceApi } from "../api/workspaces";
-import { channelApi } from "../api/channels";
-import { Badge } from "../components/common/Badge";
-import { Button } from "../components/common/Button";
-import { EmptyState } from "../components/common/EmptyState";
-import { ErrorState } from "../components/common/ErrorState";
-import { LoadingSpinner } from "../components/common/LoadingSpinner";
-import { MainContent } from "../components/layout/MainContent";
-import { InviteWorkspaceUserDialog } from "../components/workspaces/InviteWorkspaceUserDialog";
-import { StaleChannelInvitesCard } from "../components/workspaces/StaleChannelInvitesCard";
-import { queryKeys } from "../utils/queryKeys";
+import { useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import { Hash, Lock, UserPlus, Users } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { workspaceApi } from '../api/workspaces';
+import { channelApi } from '../api/channels';
+import { Badge } from '../components/common/Badge';
+import { Button } from '../components/common/Button';
+import { EmptyState } from '../components/common/EmptyState';
+import { ErrorState } from '../components/common/ErrorState';
+import { LoadingSpinner } from '../components/common/LoadingSpinner';
+import { MainContent } from '../components/layout/MainContent';
+import { InviteWorkspaceUserDialog } from '../components/workspaces/InviteWorkspaceUserDialog';
+import { StaleChannelInvitesCard } from '../components/workspaces/StaleChannelInvitesCard';
+import { queryKeys } from '../utils/queryKeys';
 
 export function WorkspaceHomePage() {
   const { workspaceId } = useParams();
@@ -30,7 +30,12 @@ export function WorkspaceHomePage() {
   });
 
   if (workspaceQuery.isLoading) return <LoadingSpinner />;
-  if (workspaceQuery.error) return <MainContent><ErrorState error={workspaceQuery.error} /></MainContent>;
+  if (workspaceQuery.error)
+    return (
+      <MainContent>
+        <ErrorState error={workspaceQuery.error} />
+      </MainContent>
+    );
 
   const workspace = workspaceQuery.data;
   if (!workspace) return null;
@@ -41,15 +46,19 @@ export function WorkspaceHomePage() {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-xl font-semibold text-slate-950">{workspace.name}</h1>
-            <Badge tone={workspace.myRole === "admin" ? "blue" : "neutral"}>{workspace.myRole}</Badge>
+            <Badge tone={workspace.myRole === 'admin' ? 'blue' : 'neutral'}>
+              {workspace.myRole}
+            </Badge>
           </div>
-          <p className="mt-1 text-sm text-slate-500">{workspace.description ?? "No description"}</p>
+          <p className="mt-1 text-sm text-slate-500">{workspace.description ?? 'No description'}</p>
         </div>
         <div className="flex gap-2">
           <Link to={`/app/workspaces/${workspace.workspaceId}/members`}>
-            <Button variant="secondary" leftIcon={<Users className="h-4 w-4" />}>Members</Button>
+            <Button variant="secondary" leftIcon={<Users className="h-4 w-4" />}>
+              Members
+            </Button>
           </Link>
-          {workspace.myRole === "admin" ? (
+          {workspace.myRole === 'admin' ? (
             <Button leftIcon={<UserPlus className="h-4 w-4" />} onClick={() => setInviteOpen(true)}>
               Invite user
             </Button>
@@ -62,14 +71,19 @@ export function WorkspaceHomePage() {
           {channelsQuery.isLoading ? <LoadingSpinner /> : null}
           {channelsQuery.error ? <ErrorState error={channelsQuery.error} /> : null}
           {(() => {
-            const visible = (channelsQuery.data ?? []).filter((c) => c.type !== "direct");
+            const visible = (channelsQuery.data ?? []).filter((c) => c.type !== 'direct');
             if (channelsQuery.data && visible.length === 0) {
-              return <EmptyState title="No visible channels" description="Create or join a public channel from the sidebar." />;
+              return (
+                <EmptyState
+                  title="No visible channels"
+                  description="Create or join a public channel from the sidebar."
+                />
+              );
             }
             return (
               <div className="mt-3 divide-y divide-slate-200">
                 {visible.map((channel) => {
-                  const Icon = channel.type === "private" ? Lock : Hash;
+                  const Icon = channel.type === 'private' ? Lock : Hash;
                   return (
                     <Link
                       key={channel.channelId}
@@ -80,7 +94,10 @@ export function WorkspaceHomePage() {
                         <Icon className="h-4 w-4 text-slate-500" />
                         {channel.channelName}
                       </span>
-                      <Badge>{channel.type}{channel.isMember ? "" : " - not joined"}</Badge>
+                      <Badge>
+                        {channel.type}
+                        {channel.isMember ? '' : ' - not joined'}
+                      </Badge>
                     </Link>
                   );
                 })}

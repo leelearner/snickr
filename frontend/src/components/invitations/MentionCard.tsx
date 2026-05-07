@@ -1,22 +1,30 @@
-import { Link } from "react-router-dom";
-import { AtSign, Hash, LogIn, MessageSquare } from "lucide-react";
-import type { MentionOut } from "../../types/api";
-import { formatDate } from "../../utils/format";
-import { displayName as safeDisplayName } from "../../utils/displayName";
-import { renderMessageContent } from "../../utils/renderContent";
-import { Avatar } from "../common/Avatar";
+import { Link } from 'react-router-dom';
+import { AtSign, Hash, LogIn, MessageSquare } from 'lucide-react';
+import type { MentionOut } from '../../types/api';
+import { formatDate } from '../../utils/format';
+import { displayName as safeDisplayName } from '../../utils/displayName';
+import { renderMessageContent } from '../../utils/renderContent';
+import { Avatar } from '../common/Avatar';
 
-export function MentionCard({ mention, unread = false }: { mention: MentionOut; unread?: boolean }) {
+export function MentionCard({
+  mention,
+  unread = false,
+}: {
+  mention: MentionOut;
+  unread?: boolean;
+}) {
   const displayName = safeDisplayName(mention.postedByNickname, mention.postedByUsername);
 
-  const Icon = mention.kind === "dm" ? MessageSquare : mention.kind === "join" ? LogIn : AtSign;
+  const Icon = mention.kind === 'dm' ? MessageSquare : mention.kind === 'join' ? LogIn : AtSign;
   const accent =
-    mention.kind === "dm" ? "text-violet-700"
-    : mention.kind === "join" ? "text-emerald-700"
-    : "text-blue-700";
+    mention.kind === 'dm'
+      ? 'text-violet-700'
+      : mention.kind === 'join'
+        ? 'text-emerald-700'
+        : 'text-blue-700';
 
   const headerLocation =
-    mention.kind === "dm" ? (
+    mention.kind === 'dm' ? (
       <span className="flex items-center gap-1">
         <span>From</span>
         <span className="font-medium text-slate-700">@{mention.postedByUsername}</span>
@@ -33,15 +41,17 @@ export function MentionCard({ mention, unread = false }: { mention: MentionOut; 
       to={`/app/workspaces/${mention.workspaceId}/channels/${mention.channelId}`}
       className={`block rounded-lg border p-4 transition ${
         unread
-          ? "border-blue-200 bg-blue-50/40 hover:bg-blue-50"
-          : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
+          ? 'border-blue-200 bg-blue-50/40 hover:bg-blue-50'
+          : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
       }`}
     >
       <div className="flex items-center gap-2 text-xs text-slate-500">
         <Icon className={`h-3.5 w-3.5 ${accent}`} />
         <span className="font-semibold text-slate-700">{mention.workspaceName}</span>
         {headerLocation}
-        {unread ? <span className="h-1.5 w-1.5 rounded-full bg-blue-600" aria-label="unread" /> : null}
+        {unread ? (
+          <span className="h-1.5 w-1.5 rounded-full bg-blue-600" aria-label="unread" />
+        ) : null}
         <time className="ml-auto">{formatDate(mention.postedTime)}</time>
       </div>
       <div className="mt-2 flex items-start gap-3">

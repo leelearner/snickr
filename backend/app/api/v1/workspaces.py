@@ -32,7 +32,8 @@ async def _require_admin(conn: asyncpg.Connection, user_id: int, workspace_id: i
                AND r.name         = 'admin'
         )
         """,
-        workspace_id, user_id,
+        workspace_id,
+        user_id,
     )
     if not is_admin:
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail="admin role required")
@@ -73,7 +74,9 @@ async def create_workspace(
             VALUES ($1, $2, $3, NOW(), NOW())
             RETURNING workspaceID
             """,
-            body.name, body.description, user_id,
+            body.name,
+            body.description,
+            user_id,
         )
         admin_role_id = await conn.fetchval("SELECT roleID FROM roles WHERE name = 'admin'")
         await conn.execute(
@@ -81,16 +84,26 @@ async def create_workspace(
             INSERT INTO workspacemember (workspaceID, userID, role, joined_time)
             VALUES ($1, $2, $3, NOW())
             """,
-            ws_id, user_id, admin_role_id,
+            ws_id,
+            user_id,
+            admin_role_id,
         )
         general_channel_id = await conn.fetchval(
             "SELECT create_channel_for_member($1, $2, $3, $4)",
-            ws_id, "general", "public", user_id,
+            ws_id,
+            "general",
+            "public",
+            user_id,
         )
         if general_channel_id is None:
-            raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="failed to create default channel")
+            raise HTTPException(
+                status.HTTP_500_INTERNAL_SERVER_ERROR, detail="failed to create default channel"
+            )
     return WorkspaceSummary(
-        workspaceId=ws_id, name=body.name, description=body.description, myRole="admin",
+        workspaceId=ws_id,
+        name=body.name,
+        description=body.description,
+        myRole="admin",
     )
 
 
@@ -140,7 +153,8 @@ async def get_workspace(
          WHERE w.workspaceID = $1
            AND wm.userID     = $2
         """,
-        workspace_id, user_id,
+        workspace_id,
+        user_id,
     )
     if ws is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="workspace not found")
@@ -181,7 +195,8 @@ async def invite_to_workspace(
 
     already_member = await conn.fetchval(
         "SELECT EXISTS(SELECT 1 FROM workspacemember WHERE workspaceID=$1 AND userID=$2)",
-        workspace_id, invitee_id,
+        workspace_id,
+        invitee_id,
     )
     if already_member:
         raise HTTPException(status.HTTP_409_CONFLICT, detail="user is already a member")
@@ -197,10 +212,13 @@ async def invite_to_workspace(
               SET inviter      = EXCLUDED.inviter,
                   invited_time = EXCLUDED.invited_time,
                   status_type  = EXCLUDED.status_type
-            WHERE workspaceinvitation.status_type <> (SELECT statusID FROM status WHERE type = 'pending')
+            WHERE workspaceinvitation.status_type
+                  <> (SELECT statusID FROM status WHERE type = 'pending')
         RETURNING invitationID
         """,
-        workspace_id, invitee_id, user_id,
+        workspace_id,
+        invitee_id,
+        user_id,
     )
     if invitation_id is None:
         raise HTTPException(status.HTTP_409_CONFLICT, detail="invitation already exists")
@@ -241,15 +259,17 @@ async def stale_channel_invites(
 
 
 async def _admin_count(conn: asyncpg.Connection, workspace_id: int) -> int:
-    return int(await conn.fetchval(
-        """
+    return int(
+        await conn.fetchval(
+            """
         SELECT COUNT(*)
           FROM workspacemember wm
           JOIN roles r ON r.roleID = wm.role
          WHERE wm.workspaceID = $1 AND r.name = 'admin'
         """,
-        workspace_id,
-    ))
+            workspace_id,
+        )
+    )
 
 
 @router.delete("/{workspace_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -282,13 +302,20 @@ async def remove_member(
           JOIN roles r ON r.roleID = wm.role
          WHERE wm.workspaceID = $1 AND wm.userID = $2
         """,
-        workspace_id, target_user_id,
+        workspace_id,
+        target_user_id,
     )
     if target is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="user is not a member of this workspace")
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND, detail="user is not a member of this workspace"
+        )
 
     if target["role"] == "admin" and await _admin_count(conn, workspace_id) == 1:
-        detail = "cannot leave as the only admin; promote someone else first" if is_self else "cannot remove the last admin"
+        detail = (
+            "cannot leave as the only admin; promote someone else first"
+            if is_self
+            else "cannot remove the last admin"
+        )
         raise HTTPException(status.HTTP_409_CONFLICT, detail=detail)
 
     async with conn.transaction():
@@ -298,11 +325,13 @@ async def remove_member(
              WHERE userID = $1
                AND channelID IN (SELECT channelID FROM channels WHERE workspaceID = $2)
             """,
-            target_user_id, workspace_id,
+            target_user_id,
+            workspace_id,
         )
         await conn.execute(
             "DELETE FROM workspacemember WHERE workspaceID = $1 AND userID = $2",
-            workspace_id, target_user_id,
+            workspace_id,
+            target_user_id,
         )
 
 
@@ -323,10 +352,13 @@ async def change_member_role(
           JOIN roles r ON r.roleID = wm.role
          WHERE wm.workspaceID = $1 AND wm.userID = $2
         """,
-        workspace_id, target_user_id,
+        workspace_id,
+        target_user_id,
     )
     if current is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="user is not a member of this workspace")
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND, detail="user is not a member of this workspace"
+        )
     if current == body.role:
         return {"ok": True, "role": body.role}
 
@@ -339,7 +371,9 @@ async def change_member_role(
            SET role = (SELECT roleID FROM roles WHERE name = $1)
          WHERE workspaceID = $2 AND userID = $3
         """,
-        body.role, workspace_id, target_user_id,
+        body.role,
+        workspace_id,
+        target_user_id,
     )
     return {"ok": True, "role": body.role}
 
@@ -380,7 +414,9 @@ async def respond_workspace_invitation(
         # Stored procedure flips status -> accepted and inserts workspacemember atomically.
         try:
             workspace_id = await conn.fetchval(
-                "SELECT accept_workspace_invitation($1, $2)", invitation_id, user_id,
+                "SELECT accept_workspace_invitation($1, $2)",
+                invitation_id,
+                user_id,
             )
         except asyncpg.RaiseError as e:
             raise HTTPException(status.HTTP_409_CONFLICT, detail=str(e))
@@ -397,12 +433,15 @@ async def respond_workspace_invitation(
              WHERE wi.invitationID = $1
                AND wi.invitee      = $2
             """,
-            invitation_id, user_id,
+            invitation_id,
+            user_id,
         )
         if inv is None:
             raise HTTPException(status.HTTP_404_NOT_FOUND, detail="invitation not found")
         if inv["status"] != "pending":
-            raise HTTPException(status.HTTP_409_CONFLICT, detail=f"invitation already {inv['status']}")
+            raise HTTPException(
+                status.HTTP_409_CONFLICT, detail=f"invitation already {inv['status']}"
+            )
 
         await conn.execute(
             """

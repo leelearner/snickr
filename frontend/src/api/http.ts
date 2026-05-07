@@ -1,32 +1,32 @@
-import type { ApiError } from "../types/api";
+import type { ApiError } from '../types/api';
 
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '';
 
-interface RequestOptions extends Omit<RequestInit, "body"> {
+interface RequestOptions extends Omit<RequestInit, 'body'> {
   body?: unknown;
 }
 
 function buildApiError(status: number, detail: string): ApiError {
   const error = new Error(detail) as ApiError;
-  error.name = "ApiError";
+  error.name = 'ApiError';
   error.status = status;
   error.detail = detail;
   return error;
 }
 
 async function parseError(response: Response): Promise<string> {
-  const contentType = response.headers.get("content-type") ?? "";
+  const contentType = response.headers.get('content-type') ?? '';
   try {
-    if (contentType.includes("application/json")) {
+    if (contentType.includes('application/json')) {
       const data = (await response.json()) as { detail?: unknown };
-      if (typeof data.detail === "string") return data.detail;
-      if (Array.isArray(data.detail)) return "Request validation failed.";
+      if (typeof data.detail === 'string') return data.detail;
+      if (Array.isArray(data.detail)) return 'Request validation failed.';
       return JSON.stringify(data.detail ?? data);
     }
     const text = await response.text();
-    return text || response.statusText || "Request failed.";
+    return text || response.statusText || 'Request failed.';
   } catch {
-    return response.statusText || "Request failed.";
+    return response.statusText || 'Request failed.';
   }
 }
 
@@ -34,13 +34,13 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   const headers = new Headers(options.headers);
   const hasBody = options.body !== undefined;
 
-  if (hasBody && !headers.has("Content-Type")) {
-    headers.set("Content-Type", "application/json");
+  if (hasBody && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
   }
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
-    credentials: "include",
+    credentials: 'include',
     headers,
     body: hasBody ? JSON.stringify(options.body) : undefined,
   });
@@ -53,8 +53,8 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     return undefined as T;
   }
 
-  const contentType = response.headers.get("content-type") ?? "";
-  if (!contentType.includes("application/json")) {
+  const contentType = response.headers.get('content-type') ?? '';
+  if (!contentType.includes('application/json')) {
     return undefined as T;
   }
 

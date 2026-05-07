@@ -1,5 +1,5 @@
-import { Fragment, type ReactNode } from "react";
-import { Link } from "react-router-dom";
+import { Fragment, type ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 
 const MENTION_PATTERN = /@([A-Za-z0-9_.]+)/g;
 
@@ -42,10 +42,7 @@ export function renderMessageContent(content: string, options?: RenderOptions): 
       );
     } else {
       parts.push(
-        <span
-          key={key++}
-          className="rounded bg-blue-50 px-0.5 font-medium text-blue-700"
-        >
+        <span key={key++} className="rounded bg-blue-50 px-0.5 font-medium text-blue-700">
           @{username}
         </span>,
       );

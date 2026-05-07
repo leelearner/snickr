@@ -1,7 +1,7 @@
-import type { ButtonHTMLAttributes, ReactNode } from "react";
-import { Loader2 } from "lucide-react";
+import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import { Loader2 } from 'lucide-react';
 
-type Variant = "primary" | "secondary" | "ghost" | "danger";
+type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant;
@@ -10,20 +10,20 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variants: Record<Variant, string> = {
-  primary: "bg-slate-900 text-white hover:bg-slate-800 focus-visible:ring-slate-400",
+  primary: 'bg-slate-900 text-white hover:bg-slate-800 focus-visible:ring-slate-400',
   secondary:
-    "border border-slate-300 bg-white text-slate-900 hover:bg-slate-50 focus-visible:ring-slate-300",
-  ghost: "text-slate-700 hover:bg-slate-100 focus-visible:ring-slate-300",
-  danger: "bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-300",
+    'border border-slate-300 bg-white text-slate-900 hover:bg-slate-50 focus-visible:ring-slate-300',
+  ghost: 'text-slate-700 hover:bg-slate-100 focus-visible:ring-slate-300',
+  danger: 'bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-300',
 };
 
 export function Button({
   children,
-  className = "",
+  className = '',
   disabled,
   isLoading,
   leftIcon,
-  variant = "primary",
+  variant = 'primary',
   ...props
 }: ButtonProps) {
   return (

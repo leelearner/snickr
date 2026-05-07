@@ -1,5 +1,5 @@
-export type WorkspaceRole = "admin" | "member";
-export type ChannelType = "public" | "private" | "direct";
+export type WorkspaceRole = 'admin' | 'member';
+export type ChannelType = 'public' | 'private' | 'direct';
 
 export interface UserOut {
   userId: number;
@@ -76,7 +76,7 @@ export interface ChannelMember {
   joinedTime: string;
 }
 
-export type SystemKind = "join" | "leave";
+export type SystemKind = 'join' | 'leave';
 
 export interface MessageOut {
   messageId: number;
@@ -106,7 +106,7 @@ export interface UserMessage {
 
 export type SearchResult = UserMessage;
 
-export type MentionKind = "mention" | "dm" | "join";
+export type MentionKind = 'mention' | 'dm' | 'join';
 
 export interface MentionOut {
   mentionId: number;
@@ -190,7 +190,7 @@ export interface RoleChangePayload {
 
 export interface ChannelCreatePayload {
   channelName: string;
-  type: Exclude<ChannelType, "direct">;
+  type: Exclude<ChannelType, 'direct'>;
 }
 
 export interface DirectMessageCreatePayload {

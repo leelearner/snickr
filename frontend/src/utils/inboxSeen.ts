@@ -1,5 +1,5 @@
-export const INBOX_LAST_SEEN_KEY = "snickr.inbox.lastSeen";
-export const INBOX_SEEN_EVENT = "snickr:inbox-seen";
+export const INBOX_LAST_SEEN_KEY = 'snickr.inbox.lastSeen';
+export const INBOX_SEEN_EVENT = 'snickr:inbox-seen';
 
 export function markInboxSeen(): void {
   localStorage.setItem(INBOX_LAST_SEEN_KEY, String(Date.now()));

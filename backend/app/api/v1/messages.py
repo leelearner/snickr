@@ -17,10 +17,13 @@ DbId = Annotated[int, Path(ge=1, le=2_147_483_647)]
 
 
 async def _is_channel_member(conn: asyncpg.Connection, user_id: int, channel_id: int) -> bool:
-    return bool(await conn.fetchval(
-        "SELECT EXISTS(SELECT 1 FROM channelmember WHERE channelID=$1 AND userID=$2)",
-        channel_id, user_id,
-    ))
+    return bool(
+        await conn.fetchval(
+            "SELECT EXISTS(SELECT 1 FROM channelmember WHERE channelID=$1 AND userID=$2)",
+            channel_id,
+            user_id,
+        )
+    )
 
 
 @channel_msgs_router.get("/{channel_id}/messages", response_model=list[MessageOut])
@@ -85,7 +88,9 @@ async def post_channel_message(
               FROM inserted i
               JOIN users u ON u.userID = i.posted_by
             """,
-            channel_id, body.content, user_id,
+            channel_id,
+            body.content,
+            user_id,
         )
         await insert_mentions_for_message(conn, row["messageId"], channel_id, body.content)
 
@@ -103,7 +108,9 @@ async def post_channel_message(
                AND ct.name      = 'direct'
             ON CONFLICT (messageID, mentioned_user) DO NOTHING
             """,
-            row["messageId"], channel_id, user_id,
+            row["messageId"],
+            channel_id,
+            user_id,
         )
         # If the partner had dismissed the DM, a fresh message brings it back
         # into their list automatically.
@@ -119,7 +126,8 @@ async def post_channel_message(
                AND cm.userID   <> $2
                AND cm.hidden_at IS NOT NULL
             """,
-            channel_id, user_id,
+            channel_id,
+            user_id,
         )
     return MessageOut(**dict(row))
 
@@ -149,7 +157,9 @@ async def edit_channel_message(
         if existing["system_kind"] is not None:
             raise HTTPException(status.HTTP_403_FORBIDDEN, detail="cannot edit a system message")
         if existing["posted_by"] != user_id:
-            raise HTTPException(status.HTTP_403_FORBIDDEN, detail="cannot edit another user's message")
+            raise HTTPException(
+                status.HTTP_403_FORBIDDEN, detail="cannot edit another user's message"
+            )
 
         row = await conn.fetchrow(
             """
@@ -171,7 +181,8 @@ async def edit_channel_message(
               FROM updated u_msg
               JOIN users   u ON u.userID = u_msg.posted_by
             """,
-            body.content, message_id,
+            body.content,
+            message_id,
         )
 
         await conn.execute("DELETE FROM mentions WHERE messageID = $1", message_id)
@@ -203,7 +214,9 @@ async def delete_channel_message(
     if existing["system_kind"] is not None:
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail="cannot delete a system message")
     if existing["posted_by"] != user_id:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, detail="cannot delete another user's message")
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN, detail="cannot delete another user's message"
+        )
 
     await conn.execute("DELETE FROM messages WHERE messageID = $1", message_id)
 
@@ -272,6 +285,7 @@ async def search_messages(
          WHERE m.content ILIKE $2
          ORDER BY m.posted_time ASC, m.messageID ASC
         """,
-        user_id, pattern,
+        user_id,
+        pattern,
     )
     return [MessageWithLocation(**dict(r)) for r in rows]

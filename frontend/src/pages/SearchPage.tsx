@@ -1,19 +1,19 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import { Search } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
-import { searchApi } from "../api/search";
-import { EmptyState } from "../components/common/EmptyState";
-import { ErrorState } from "../components/common/ErrorState";
-import { LoadingSpinner } from "../components/common/LoadingSpinner";
-import { MainContent } from "../components/layout/MainContent";
-import { SearchResultItem } from "../components/search/SearchResultItem";
-import { queryKeys } from "../utils/queryKeys";
+import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Search } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { searchApi } from '../api/search';
+import { EmptyState } from '../components/common/EmptyState';
+import { ErrorState } from '../components/common/ErrorState';
+import { LoadingSpinner } from '../components/common/LoadingSpinner';
+import { MainContent } from '../components/layout/MainContent';
+import { SearchResultItem } from '../components/search/SearchResultItem';
+import { queryKeys } from '../utils/queryKeys';
 
 export function SearchPage() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  const q = useMemo(() => (params.get("q") ?? "").trim(), [params]);
+  const q = useMemo(() => (params.get('q') ?? '').trim(), [params]);
   const [value, setValue] = useState(q);
   const query = useQuery({
     queryKey: queryKeys.search(q),
@@ -28,7 +28,7 @@ export function SearchPage() {
   function submit(event: FormEvent) {
     event.preventDefault();
     const trimmed = value.trim();
-    navigate(trimmed ? `/app/search?q=${encodeURIComponent(trimmed)}` : "/app/search");
+    navigate(trimmed ? `/app/search?q=${encodeURIComponent(trimmed)}` : '/app/search');
   }
 
   const resultCount = query.data?.length ?? 0;
@@ -51,11 +51,16 @@ export function SearchPage() {
         <p className="mt-3 text-sm text-slate-500">
           {query.isLoading
             ? `Searching for "${q}"...`
-            : `${resultCount} result${resultCount === 1 ? "" : "s"} for "${q}"`}
+            : `${resultCount} result${resultCount === 1 ? '' : 's'} for "${q}"`}
         </p>
       ) : null}
       <div className="mt-4">
-        {!q ? <EmptyState title="Enter a keyword" description="Search runs across messages in channels you can see." /> : null}
+        {!q ? (
+          <EmptyState
+            title="Enter a keyword"
+            description="Search runs across messages in channels you can see."
+          />
+        ) : null}
         {query.isLoading ? <LoadingSpinner /> : null}
         {query.error ? <ErrorState error={query.error} /> : null}
         {q && resultCount === 0 && !query.isLoading && !query.error ? (

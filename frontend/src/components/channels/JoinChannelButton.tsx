@@ -1,8 +1,8 @@
-import { Plus } from "lucide-react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { channelApi } from "../../api/channels";
-import { queryKeys } from "../../utils/queryKeys";
-import { Button } from "../common/Button";
+import { Plus } from 'lucide-react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { channelApi } from '../../api/channels';
+import { queryKeys } from '../../utils/queryKeys';
+import { Button } from '../common/Button';
 
 export function JoinChannelButton({
   channelId,

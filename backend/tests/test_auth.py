@@ -34,11 +34,14 @@ async def test_register_duplicate_returns_409(make_client, uid):
     c2 = await make_client()
     await register(c1, uid)
 
-    r = await c2.post("/api/auth/register", json={
-        "email": f"{uid}-dup@example.com",
-        "username": uid,  # duplicate
-        "password": "pw-12345",
-    })
+    r = await c2.post(
+        "/api/auth/register",
+        json={
+            "email": f"{uid}-dup@example.com",
+            "username": uid,  # duplicate
+            "password": "pw-12345",
+        },
+    )
     assert r.status_code == 409
 
 
@@ -49,11 +52,14 @@ async def test_register_normalizes_username_and_email_case(make_client, uid):
 
     mixed_username = f"{uid}User"
     mixed_email = f"{uid}User@Example.COM"
-    r = await c1.post("/api/auth/register", json={
-        "email": mixed_email,
-        "username": mixed_username,
-        "password": "pw-12345",
-    })
+    r = await c1.post(
+        "/api/auth/register",
+        json={
+            "email": mixed_email,
+            "username": mixed_username,
+            "password": "pw-12345",
+        },
+    )
     assert r.status_code == 201, r.text
     assert r.json()["email"] == mixed_email.lower()
     assert r.json()["username"] == mixed_username.lower()
@@ -61,21 +67,29 @@ async def test_register_normalizes_username_and_email_case(make_client, uid):
     r = await c1.post("/api/auth/logout")
     assert r.status_code == 200
 
-    r = await c2.post("/api/auth/register", json={
-        "email": f"{uid}other@example.com",
-        "username": mixed_username.upper(),
-        "password": "pw-12345",
-    })
+    r = await c2.post(
+        "/api/auth/register",
+        json={
+            "email": f"{uid}other@example.com",
+            "username": mixed_username.upper(),
+            "password": "pw-12345",
+        },
+    )
     assert r.status_code == 409
 
-    r = await c3.post("/api/auth/register", json={
-        "email": mixed_email.upper(),
-        "username": f"{uid}other",
-        "password": "pw-12345",
-    })
+    r = await c3.post(
+        "/api/auth/register",
+        json={
+            "email": mixed_email.upper(),
+            "username": f"{uid}other",
+            "password": "pw-12345",
+        },
+    )
     assert r.status_code == 409
 
-    r = await c2.post("/api/auth/login", json={"username": mixed_username.upper(), "password": "pw-12345"})
+    r = await c2.post(
+        "/api/auth/login", json={"username": mixed_username.upper(), "password": "pw-12345"}
+    )
     assert r.status_code == 200
 
 
@@ -92,7 +106,9 @@ async def test_login_wrong_password_returns_401(make_client, uid):
 
 async def test_login_unknown_user_returns_401(make_client):
     c = await make_client()
-    r = await c.post("/api/auth/login", json={"username": "no_such_user_zzz", "password": "irrelevant"})
+    r = await c.post(
+        "/api/auth/login", json={"username": "no_such_user_zzz", "password": "irrelevant"}
+    )
     assert r.status_code == 401
     assert r.json()["detail"] == "invalid credentials"
 
@@ -112,10 +128,14 @@ async def test_profile_password_change_requires_current(make_client, uid):
     r = await c.patch("/api/auth/me", json={"newPassword": "newer-pw-1"})
     assert r.status_code == 400
 
-    r = await c.patch("/api/auth/me", json={"currentPassword": "WRONG-pw", "newPassword": "newer-pw-1"})
+    r = await c.patch(
+        "/api/auth/me", json={"currentPassword": "WRONG-pw", "newPassword": "newer-pw-1"}
+    )
     assert r.status_code == 403
 
-    r = await c.patch("/api/auth/me", json={"currentPassword": "pw-12345", "newPassword": "newer-pw-1"})
+    r = await c.patch(
+        "/api/auth/me", json={"currentPassword": "pw-12345", "newPassword": "newer-pw-1"}
+    )
     assert r.status_code == 200
 
     # Old password no longer works; new one does.
@@ -130,7 +150,7 @@ async def test_profile_email_collision_returns_409(make_client, uid):
     c1 = await make_client()
     c2 = await make_client()
     await register(c1, uid)
-    other = await register(c2, uid + "x")
+    await register(c2, uid + "x")
 
     r = await c2.patch("/api/auth/me", json={"email": f"{uid}@example.com"})
     assert r.status_code == 409

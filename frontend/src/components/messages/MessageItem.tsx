@@ -1,14 +1,14 @@
-import { KeyboardEvent, forwardRef, useEffect, useRef, useState } from "react";
-import { LogIn, LogOut, Pencil, Trash2 } from "lucide-react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type { ChannelMember, MessageOut } from "../../types/api";
-import { messageApi } from "../../api/messages";
-import { useAuth } from "../../context/AuthContext";
-import { errorMessage, formatDate, formatTimeShort } from "../../utils/format";
-import { displayName as safeDisplayName } from "../../utils/displayName";
-import { renderMessageContent } from "../../utils/renderContent";
-import { queryKeys } from "../../utils/queryKeys";
-import { Avatar } from "../common/Avatar";
+import { KeyboardEvent, forwardRef, useEffect, useRef, useState } from 'react';
+import { LogIn, LogOut, Pencil, Trash2 } from 'lucide-react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import type { ChannelMember, MessageOut } from '../../types/api';
+import { messageApi } from '../../api/messages';
+import { useAuth } from '../../context/useAuth';
+import { errorMessage, formatDate, formatTimeShort } from '../../utils/format';
+import { displayName as safeDisplayName } from '../../utils/displayName';
+import { renderMessageContent } from '../../utils/renderContent';
+import { queryKeys } from '../../utils/queryKeys';
+import { Avatar } from '../common/Avatar';
 
 interface MessageItemProps {
   message: MessageOut;
@@ -18,23 +18,28 @@ interface MessageItemProps {
   compact?: boolean;
 }
 
-export function MessageItem({ message, channelId, workspaceId, members, compact = false }: MessageItemProps) {
+export function MessageItem({
+  message,
+  channelId,
+  workspaceId,
+  members,
+  compact = false,
+}: MessageItemProps) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(message.content);
-  const [actionError, setActionError] = useState("");
+  const [actionError, setActionError] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const displayName = safeDisplayName(message.postedByNickname, message.postedByUsername);
   const isSystem = message.systemKind != null;
   const isMine = !isSystem && user?.userId === message.postedBy;
 
   const updateMutation = useMutation({
-    mutationFn: (content: string) =>
-      messageApi.update(channelId, message.messageId, { content }),
+    mutationFn: (content: string) => messageApi.update(channelId, message.messageId, { content }),
     onSuccess: async () => {
       setEditing(false);
-      setActionError("");
+      setActionError('');
       await queryClient.invalidateQueries({ queryKey: queryKeys.messages(channelId) });
     },
     onError: (error) => setActionError(errorMessage(error)),
@@ -43,7 +48,7 @@ export function MessageItem({ message, channelId, workspaceId, members, compact 
   const deleteMutation = useMutation({
     mutationFn: () => messageApi.delete(channelId, message.messageId),
     onSuccess: async () => {
-      setActionError("");
+      setActionError('');
       await queryClient.invalidateQueries({ queryKey: queryKeys.messages(channelId) });
     },
     onError: (error) => setActionError(errorMessage(error)),
@@ -58,20 +63,20 @@ export function MessageItem({ message, channelId, workspaceId, members, compact 
 
   function startEdit() {
     setDraft(message.content);
-    setActionError("");
+    setActionError('');
     setEditing(true);
   }
 
   function cancelEdit() {
     setEditing(false);
     setDraft(message.content);
-    setActionError("");
+    setActionError('');
   }
 
   function saveEdit() {
     const trimmed = draft.trim();
     if (!trimmed || trimmed.length > 500) {
-      setActionError("Message must be 1-500 characters.");
+      setActionError('Message must be 1-500 characters.');
       return;
     }
     if (trimmed === message.content) {
@@ -82,18 +87,18 @@ export function MessageItem({ message, channelId, workspaceId, members, compact 
   }
 
   function handleKey(event: KeyboardEvent<HTMLTextAreaElement>) {
-    if (event.key === "Enter" && !event.shiftKey) {
+    if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
       saveEdit();
     }
-    if (event.key === "Escape") {
+    if (event.key === 'Escape') {
       event.preventDefault();
       cancelEdit();
     }
   }
 
   function confirmDelete() {
-    if (window.confirm("Delete this message? This cannot be undone.")) {
+    if (window.confirm('Delete this message? This cannot be undone.')) {
       deleteMutation.mutate();
     }
   }
@@ -102,27 +107,28 @@ export function MessageItem({ message, channelId, workspaceId, members, compact 
     <span className="ml-1 text-xs text-slate-400">(edited)</span>
   ) : null;
 
-  const actions = isMine && !editing ? (
-    <div className="absolute right-3 top-1.5 hidden gap-0.5 rounded-md border border-slate-200 bg-white p-0.5 shadow-sm group-hover:flex">
-      <button
-        type="button"
-        onClick={startEdit}
-        className="flex h-6 w-6 items-center justify-center rounded text-slate-500 hover:bg-slate-100 hover:text-slate-800"
-        title="Edit message"
-      >
-        <Pencil className="h-3.5 w-3.5" />
-      </button>
-      <button
-        type="button"
-        onClick={confirmDelete}
-        disabled={deleteMutation.isPending}
-        className="flex h-6 w-6 items-center justify-center rounded text-slate-500 hover:bg-red-50 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
-        title="Delete message"
-      >
-        <Trash2 className="h-3.5 w-3.5" />
-      </button>
-    </div>
-  ) : null;
+  const actions =
+    isMine && !editing ? (
+      <div className="absolute right-3 top-1.5 hidden gap-0.5 rounded-md border border-slate-200 bg-white p-0.5 shadow-sm group-hover:flex">
+        <button
+          type="button"
+          onClick={startEdit}
+          className="flex h-6 w-6 items-center justify-center rounded text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+          title="Edit message"
+        >
+          <Pencil className="h-3.5 w-3.5" />
+        </button>
+        <button
+          type="button"
+          onClick={confirmDelete}
+          disabled={deleteMutation.isPending}
+          className="flex h-6 w-6 items-center justify-center rounded text-slate-500 hover:bg-red-50 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+          title="Delete message"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
+      </div>
+    ) : null;
 
   const editView = (
     <EditView
@@ -137,13 +143,15 @@ export function MessageItem({ message, channelId, workspaceId, members, compact 
   );
 
   if (isSystem) {
-    const SystemIcon = message.systemKind === "leave" ? LogOut : LogIn;
+    const SystemIcon = message.systemKind === 'leave' ? LogOut : LogIn;
     return (
       <article className="flex items-center gap-2 px-5 py-1 text-xs text-slate-500">
         <SystemIcon className="h-3.5 w-3.5 text-slate-400" />
         <span className="font-medium text-slate-600">{displayName}</span>
         <span>{message.content}</span>
-        <time className="ml-auto text-[11px] text-slate-400">{formatTimeShort(message.postedTime)}</time>
+        <time className="ml-auto text-[11px] text-slate-400">
+          {formatTimeShort(message.postedTime)}
+        </time>
       </article>
     );
   }
@@ -155,7 +163,9 @@ export function MessageItem({ message, channelId, workspaceId, members, compact 
           {formatTimeShort(message.postedTime)}
         </div>
         <div className="min-w-0 flex-1">
-          {editing ? editView : (
+          {editing ? (
+            editView
+          ) : (
             <p className="whitespace-pre-wrap break-words text-sm leading-6 text-slate-800">
               {renderMessageContent(message.content, { members, fromWorkspaceId: workspaceId })}
               {editedSuffix}
@@ -176,7 +186,9 @@ export function MessageItem({ message, channelId, workspaceId, members, compact 
           <span className="font-bold text-slate-950">{displayName}</span>
           <time className="text-xs text-slate-400">{formatDate(message.postedTime)}</time>
         </div>
-        {editing ? editView : (
+        {editing ? (
+          editView
+        ) : (
           <p className="mt-0.5 whitespace-pre-wrap break-words text-sm leading-6 text-slate-800">
             {renderMessageContent(message.content)}
             {editedSuffix}

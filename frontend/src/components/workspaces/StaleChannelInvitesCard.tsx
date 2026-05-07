@@ -1,9 +1,9 @@
-import { useQuery } from "@tanstack/react-query";
-import { workspaceApi } from "../../api/workspaces";
-import { queryKeys } from "../../utils/queryKeys";
-import { EmptyState } from "../common/EmptyState";
-import { ErrorState } from "../common/ErrorState";
-import { LoadingSpinner } from "../common/LoadingSpinner";
+import { useQuery } from '@tanstack/react-query';
+import { workspaceApi } from '../../api/workspaces';
+import { queryKeys } from '../../utils/queryKeys';
+import { EmptyState } from '../common/EmptyState';
+import { ErrorState } from '../common/ErrorState';
+import { LoadingSpinner } from '../common/LoadingSpinner';
 
 export function StaleChannelInvitesCard({ workspaceId }: { workspaceId: number }) {
   const query = useQuery({
@@ -18,10 +18,15 @@ export function StaleChannelInvitesCard({ workspaceId }: { workspaceId: number }
   return (
     <section className="rounded-lg border border-slate-200 bg-white p-4">
       <h2 className="text-sm font-semibold text-slate-950">Stale channel invitations</h2>
-      <p className="mt-1 text-sm text-slate-500">Pending public channel invitations older than five days.</p>
+      <p className="mt-1 text-sm text-slate-500">
+        Pending public channel invitations older than five days.
+      </p>
       {stale.length === 0 ? (
         <div className="mt-4">
-          <EmptyState title="No stale channel invites" description="No pending channel invitations are older than 5 days." />
+          <EmptyState
+            title="No stale channel invites"
+            description="No pending channel invitations are older than 5 days."
+          />
         </div>
       ) : (
         <div className="mt-4 divide-y divide-slate-200">

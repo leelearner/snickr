@@ -1,18 +1,27 @@
-import { ReactNode, useMemo, useState } from "react";
-import { AtSign, Check, Hash, Inbox, LayoutGrid, LogIn, MessageSquare, type LucideIcon } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
-import { channelApi } from "../api/channels";
-import { mentionsApi } from "../api/mentions";
-import { workspaceApi } from "../api/workspaces";
-import { EmptyState } from "../components/common/EmptyState";
-import { ErrorState } from "../components/common/ErrorState";
-import { LoadingSpinner } from "../components/common/LoadingSpinner";
-import { MainContent } from "../components/layout/MainContent";
-import { ChannelInvitationCard } from "../components/invitations/ChannelInvitationCard";
-import { MentionCard } from "../components/invitations/MentionCard";
-import { WorkspaceInvitationCard } from "../components/invitations/WorkspaceInvitationCard";
-import { queryKeys } from "../utils/queryKeys";
-import { markInboxSeen, readInboxLastSeen } from "../utils/inboxSeen";
+import { ReactNode, useMemo, useState } from 'react';
+import {
+  AtSign,
+  Check,
+  Hash,
+  Inbox,
+  LayoutGrid,
+  LogIn,
+  MessageSquare,
+  type LucideIcon,
+} from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { channelApi } from '../api/channels';
+import { mentionsApi } from '../api/mentions';
+import { workspaceApi } from '../api/workspaces';
+import { EmptyState } from '../components/common/EmptyState';
+import { ErrorState } from '../components/common/ErrorState';
+import { LoadingSpinner } from '../components/common/LoadingSpinner';
+import { MainContent } from '../components/layout/MainContent';
+import { ChannelInvitationCard } from '../components/invitations/ChannelInvitationCard';
+import { MentionCard } from '../components/invitations/MentionCard';
+import { WorkspaceInvitationCard } from '../components/invitations/WorkspaceInvitationCard';
+import { queryKeys } from '../utils/queryKeys';
+import { markInboxSeen, readInboxLastSeen } from '../utils/inboxSeen';
 
 function SectionHeader({ icon: Icon, children }: { icon: LucideIcon; children: ReactNode }) {
   return (
@@ -53,16 +62,14 @@ export function InvitationsPage() {
   const grouped = useMemo(() => {
     const data = mentions.data ?? [];
     return {
-      mentions: data.filter((m) => m.kind === "mention"),
-      dms: data.filter((m) => m.kind === "dm"),
-      joins: data.filter((m) => m.kind === "join"),
+      mentions: data.filter((m) => m.kind === 'mention'),
+      dms: data.filter((m) => m.kind === 'dm'),
+      joins: data.filter((m) => m.kind === 'join'),
     };
   }, [mentions.data]);
 
-  const loading =
-    workspaceInvites.isLoading || channelInvites.isLoading || mentions.isLoading;
-  const invitationCount =
-    (workspaceInvites.data?.length ?? 0) + (channelInvites.data?.length ?? 0);
+  const loading = workspaceInvites.isLoading || channelInvites.isLoading || mentions.isLoading;
+  const invitationCount = (workspaceInvites.data?.length ?? 0) + (channelInvites.data?.length ?? 0);
   const notificationCount = grouped.mentions.length + grouped.dms.length + grouped.joins.length;
   const empty = invitationCount === 0 && notificationCount === 0;
 
@@ -76,15 +83,15 @@ export function InvitationsPage() {
             {invitationCount > 0 || notificationCount > 0
               ? [
                   invitationCount > 0
-                    ? `${invitationCount} invitation${invitationCount === 1 ? "" : "s"}`
+                    ? `${invitationCount} invitation${invitationCount === 1 ? '' : 's'}`
                     : null,
                   notificationCount > 0
-                    ? `${notificationCount} notification${notificationCount === 1 ? "" : "s"}`
+                    ? `${notificationCount} notification${notificationCount === 1 ? '' : 's'}`
                     : null,
                 ]
                   .filter(Boolean)
-                  .join(" · ")
-              : "Invitations, mentions, direct messages, and join activity show up here."}
+                  .join(' · ')
+              : 'Invitations, mentions, direct messages, and join activity show up here.'}
           </p>
         </div>
         {notificationCount > 0 ? (
@@ -104,7 +111,10 @@ export function InvitationsPage() {
         {channelInvites.error ? <ErrorState error={channelInvites.error} /> : null}
         {mentions.error ? <ErrorState error={mentions.error} /> : null}
         {!loading && empty ? (
-          <EmptyState title="Nothing here yet" description="Pending invitations and recent activity show up here." />
+          <EmptyState
+            title="Nothing here yet"
+            description="Pending invitations and recent activity show up here."
+          />
         ) : null}
         {(workspaceInvites.data?.length ?? 0) > 0 ? (
           <section>
@@ -131,7 +141,11 @@ export function InvitationsPage() {
             <SectionHeader icon={AtSign}>Mentions</SectionHeader>
             <div className="space-y-2">
               {grouped.mentions.map((mention) => (
-                <MentionCard key={mention.mentionId} mention={mention} unread={isUnread(mention.postedTime)} />
+                <MentionCard
+                  key={mention.mentionId}
+                  mention={mention}
+                  unread={isUnread(mention.postedTime)}
+                />
               ))}
             </div>
           </section>
@@ -141,7 +155,11 @@ export function InvitationsPage() {
             <SectionHeader icon={MessageSquare}>Direct messages</SectionHeader>
             <div className="space-y-2">
               {grouped.dms.map((mention) => (
-                <MentionCard key={mention.mentionId} mention={mention} unread={isUnread(mention.postedTime)} />
+                <MentionCard
+                  key={mention.mentionId}
+                  mention={mention}
+                  unread={isUnread(mention.postedTime)}
+                />
               ))}
             </div>
           </section>
@@ -151,7 +169,11 @@ export function InvitationsPage() {
             <SectionHeader icon={LogIn}>Channel joins</SectionHeader>
             <div className="space-y-2">
               {grouped.joins.map((mention) => (
-                <MentionCard key={mention.mentionId} mention={mention} unread={isUnread(mention.postedTime)} />
+                <MentionCard
+                  key={mention.mentionId}
+                  mention={mention}
+                  unread={isUnread(mention.postedTime)}
+                />
               ))}
             </div>
           </section>

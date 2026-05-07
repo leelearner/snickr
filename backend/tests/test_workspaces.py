@@ -74,7 +74,9 @@ async def test_non_admin_cannot_invite(make_client, uid):
     await bob.post(f"/api/me/workspace-invitations/{inv_id}", json={"accept": True})
 
     # bob is now a member but not admin -> cannot invite carol
-    r = await bob.post(f"/api/workspaces/{ws_id}/invitations", json={"username": c_user["username"]})
+    r = await bob.post(
+        f"/api/workspaces/{ws_id}/invitations", json={"username": c_user["username"]}
+    )
     assert r.status_code == 403
 
 
@@ -91,15 +93,21 @@ async def test_admin_promote_demote_and_last_admin_guard(make_client, uid):
 
     # alice is the only admin; demoting her must fail.
     a_user_id = (await alice.get("/api/auth/me")).json()["userId"]
-    r = await alice.patch(f"/api/workspaces/{ws_id}/members/{a_user_id}/role", json={"role": "member"})
+    r = await alice.patch(
+        f"/api/workspaces/{ws_id}/members/{a_user_id}/role", json={"role": "member"}
+    )
     assert r.status_code == 409
 
     # promote bob
-    r = await alice.patch(f"/api/workspaces/{ws_id}/members/{b['userId']}/role", json={"role": "admin"})
+    r = await alice.patch(
+        f"/api/workspaces/{ws_id}/members/{b['userId']}/role", json={"role": "admin"}
+    )
     assert r.status_code == 200
 
     # now alice CAN be demoted (bob is also admin)
-    r = await alice.patch(f"/api/workspaces/{ws_id}/members/{a_user_id}/role", json={"role": "member"})
+    r = await alice.patch(
+        f"/api/workspaces/{ws_id}/members/{a_user_id}/role", json={"role": "member"}
+    )
     assert r.status_code == 200
 
 
@@ -114,8 +122,11 @@ async def test_remove_member_kicks_from_channels_too(make_client, uid):
     inv_id = (await bob.get("/api/me/workspace-invitations")).json()[0]["invitationId"]
     await bob.post(f"/api/me/workspace-invitations/{inv_id}", json={"accept": True})
 
-    ch_id = (await alice.post(f"/api/workspaces/{ws_id}/channels",
-                              json={"channelName": "ops", "type": "public"})).json()["channelId"]
+    ch_id = (
+        await alice.post(
+            f"/api/workspaces/{ws_id}/channels", json={"channelName": "ops", "type": "public"}
+        )
+    ).json()["channelId"]
     await bob.post(f"/api/channels/{ch_id}/join")
 
     # confirm bob is in the channel
@@ -165,10 +176,7 @@ async def test_admins_endpoint_includes_my_workspace_admins(make_client, uid):
     a_user_id = (await alice.get("/api/auth/me")).json()["userId"]
 
     rows = (await alice.get("/api/workspaces/admins")).json()
-    assert any(
-        r["workspaceId"] == ws["workspaceId"] and r["userId"] == a_user_id
-        for r in rows
-    )
+    assert any(r["workspaceId"] == ws["workspaceId"] and r["userId"] == a_user_id for r in rows)
 
 
 async def test_stale_channel_invites_endpoint_smoke(make_client, uid):

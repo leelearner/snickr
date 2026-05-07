@@ -1,13 +1,13 @@
-import { FormEvent, useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
-import { channelApi } from "../../api/channels";
-import type { ChannelType } from "../../types/api";
-import { queryKeys } from "../../utils/queryKeys";
-import { Button } from "../common/Button";
-import { ErrorState } from "../common/ErrorState";
-import { Input } from "../common/Input";
-import { Modal } from "../common/Modal";
+import { FormEvent, useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
+import { channelApi } from '../../api/channels';
+import type { ChannelType } from '../../types/api';
+import { queryKeys } from '../../utils/queryKeys';
+import { Button } from '../common/Button';
+import { ErrorState } from '../common/ErrorState';
+import { Input } from '../common/Input';
+import { Modal } from '../common/Modal';
 
 export function CreateChannelDialog({
   workspaceId,
@@ -20,15 +20,15 @@ export function CreateChannelDialog({
 }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [channelName, setChannelName] = useState("");
-  const [type, setType] = useState<Exclude<ChannelType, "direct">>("public");
-  const [validation, setValidation] = useState("");
+  const [channelName, setChannelName] = useState('');
+  const [type, setType] = useState<Exclude<ChannelType, 'direct'>>('public');
+  const [validation, setValidation] = useState('');
   const mutation = useMutation({
     mutationFn: () => channelApi.create(workspaceId, { channelName: channelName.trim(), type }),
     onSuccess: async (channel) => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.channels(workspaceId) });
-      setChannelName("");
-      setType("public");
+      setChannelName('');
+      setType('public');
       onClose();
       navigate(`/app/workspaces/${workspaceId}/channels/${channel.channelId}`);
     },
@@ -38,10 +38,10 @@ export function CreateChannelDialog({
     event.preventDefault();
     const trimmed = channelName.trim();
     if (!trimmed || trimmed.length > 50) {
-      setValidation("Channel name must be 1-50 characters.");
+      setValidation('Channel name must be 1-50 characters.');
       return;
     }
-    setValidation("");
+    setValidation('');
     mutation.mutate();
   }
 
@@ -59,14 +59,20 @@ export function CreateChannelDialog({
           <select
             className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-950 focus:border-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-200"
             value={type}
-            onChange={(event) => setType(event.target.value as Exclude<ChannelType, "direct">)}
+            onChange={(event) => setType(event.target.value as Exclude<ChannelType, 'direct'>)}
           >
-            <option className="text-slate-950" value="public">public</option>
-            <option className="text-slate-950" value="private">private</option>
+            <option className="text-slate-950" value="public">
+              public
+            </option>
+            <option className="text-slate-950" value="private">
+              private
+            </option>
           </select>
         </label>
         {validation ? <p className="text-sm text-red-600">{validation}</p> : null}
-        {mutation.error ? <ErrorState title="Could not create channel" error={mutation.error} /> : null}
+        {mutation.error ? (
+          <ErrorState title="Could not create channel" error={mutation.error} />
+        ) : null}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancel

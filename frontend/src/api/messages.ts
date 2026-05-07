@@ -1,5 +1,5 @@
-import { apiRequest } from "./http";
-import type { MessageCreatePayload, MessageOut, UserMessage } from "../types/api";
+import { apiRequest } from './http';
+import type { MessageCreatePayload, MessageOut, UserMessage } from '../types/api';
 
 export const messageApi = {
   list(channelId: number) {
@@ -7,19 +7,19 @@ export const messageApi = {
   },
   create(channelId: number, payload: MessageCreatePayload) {
     return apiRequest<MessageOut>(`/api/channels/${channelId}/messages`, {
-      method: "POST",
+      method: 'POST',
       body: payload,
     });
   },
   update(channelId: number, messageId: number, payload: MessageCreatePayload) {
     return apiRequest<MessageOut>(`/api/channels/${channelId}/messages/${messageId}`, {
-      method: "PATCH",
+      method: 'PATCH',
       body: payload,
     });
   },
   delete(channelId: number, messageId: number) {
     return apiRequest<void>(`/api/channels/${channelId}/messages/${messageId}`, {
-      method: "DELETE",
+      method: 'DELETE',
     });
   },
   listByUser(targetUserId: number) {

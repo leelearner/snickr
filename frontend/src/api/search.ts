@@ -1,5 +1,5 @@
-import { apiRequest } from "./http";
-import type { SearchResult } from "../types/api";
+import { apiRequest } from './http';
+import type { SearchResult } from '../types/api';
 
 export const searchApi = {
   search(q: string) {

@@ -1,7 +1,7 @@
-import { Outlet, useParams } from "react-router-dom";
-import { ChannelSidebar } from "./ChannelSidebar";
-import { TopBar } from "./TopBar";
-import { WorkspaceRail } from "./WorkspaceRail";
+import { Outlet, useParams } from 'react-router-dom';
+import { ChannelSidebar } from './ChannelSidebar';
+import { TopBar } from './TopBar';
+import { WorkspaceRail } from './WorkspaceRail';
 
 export function AppShell() {
   const { workspaceId } = useParams();

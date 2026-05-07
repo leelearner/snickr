@@ -21,17 +21,23 @@ me_router = APIRouter(prefix="/api/me", tags=["me"])
 
 
 async def _is_workspace_member(conn: asyncpg.Connection, user_id: int, workspace_id: int) -> bool:
-    return bool(await conn.fetchval(
-        "SELECT EXISTS(SELECT 1 FROM workspacemember WHERE workspaceID=$1 AND userID=$2)",
-        workspace_id, user_id,
-    ))
+    return bool(
+        await conn.fetchval(
+            "SELECT EXISTS(SELECT 1 FROM workspacemember WHERE workspaceID=$1 AND userID=$2)",
+            workspace_id,
+            user_id,
+        )
+    )
 
 
 async def _is_channel_member(conn: asyncpg.Connection, user_id: int, channel_id: int) -> bool:
-    return bool(await conn.fetchval(
-        "SELECT EXISTS(SELECT 1 FROM channelmember WHERE channelID=$1 AND userID=$2)",
-        channel_id, user_id,
-    ))
+    return bool(
+        await conn.fetchval(
+            "SELECT EXISTS(SELECT 1 FROM channelmember WHERE channelID=$1 AND userID=$2)",
+            channel_id,
+            user_id,
+        )
+    )
 
 
 @workspace_channels_router.get("/{workspace_id}/channels", response_model=list[ChannelSummary])
@@ -82,7 +88,8 @@ async def list_channels(
            )
          ORDER BY c.channel_name
         """,
-        workspace_id, user_id,
+        workspace_id,
+        user_id,
     )
     return [ChannelSummary(**dict(r)) for r in rows]
 
@@ -99,21 +106,31 @@ async def create_channel(
     conn: asyncpg.Connection = Depends(get_conn),
 ) -> ChannelSummary:
     if body.type == "direct":
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="use the direct message endpoint to create DMs")
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, detail="use the direct message endpoint to create DMs"
+        )
 
-    # Stored procedure encapsulates the membership check + channel insert + creator-as-member insert.
+    # Stored procedure: membership check + channel insert + creator-as-member insert.
     try:
         channel_id = await conn.fetchval(
             "SELECT create_channel_for_member($1, $2, $3, $4)",
-            workspace_id, body.channelName, body.type, user_id,
+            workspace_id,
+            body.channelName,
+            body.type,
+            user_id,
         )
     except asyncpg.UniqueViolationError:
-        raise HTTPException(status.HTTP_409_CONFLICT, detail="channel name already exists in this workspace")
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, detail="channel name already exists in this workspace"
+        )
     if channel_id is None:
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail="not a member of this workspace")
 
     return ChannelSummary(
-        channelId=channel_id, channelName=body.channelName, type=body.type, isMember=True,
+        channelId=channel_id,
+        channelName=body.channelName,
+        type=body.type,
+        isMember=True,
     )
 
 
@@ -129,7 +146,9 @@ async def create_or_get_direct_message(
     conn: asyncpg.Connection = Depends(get_conn),
 ) -> ChannelSummary:
     if body.targetUserId == user_id:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="cannot create a direct message with yourself")
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, detail="cannot create a direct message with yourself"
+        )
 
     target = await conn.fetchrow(
         """
@@ -149,10 +168,13 @@ async def create_or_get_direct_message(
          WHERE workspaceID = $1
            AND userID = ANY($2::int[])
         """,
-        workspace_id, [user_id, body.targetUserId],
+        workspace_id,
+        [user_id, body.targetUserId],
     )
     if not both_members:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, detail="both users must be workspace members")
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN, detail="both users must be workspace members"
+        )
 
     first_id, second_id = sorted([user_id, body.targetUserId])
     channel_name = f"dm-{first_id}-{second_id}"
@@ -160,13 +182,21 @@ async def create_or_get_direct_message(
     async with conn.transaction():
         channel_id = await conn.fetchval(
             """
-            INSERT INTO channels (workspaceID, channel_name, typeID, created_by, created_time, updated_time)
-            VALUES ($1, $2, (SELECT typeID FROM channeltype WHERE name = 'direct'), $3, NOW(), NOW())
+            INSERT INTO channels (
+                workspaceID, channel_name, typeID, created_by, created_time, updated_time
+            )
+            VALUES (
+                $1, $2,
+                (SELECT typeID FROM channeltype WHERE name = 'direct'),
+                $3, NOW(), NOW()
+            )
             ON CONFLICT (workspaceID, channel_name)
             DO UPDATE SET updated_time = channels.updated_time
             RETURNING channelID
             """,
-            workspace_id, channel_name, user_id,
+            workspace_id,
+            channel_name,
+            user_id,
         )
         await conn.executemany(
             """
@@ -180,7 +210,8 @@ async def create_or_get_direct_message(
         # back into their list.
         await conn.execute(
             "UPDATE channelmember SET hidden_at = NULL WHERE channelID = $1 AND userID = $2",
-            channel_id, user_id,
+            channel_id,
+            user_id,
         )
 
     return ChannelSummary(
@@ -269,7 +300,8 @@ async def leave_channel(
                SET hidden_at = timezone('America/New_York', NOW())
              WHERE channelID = $1 AND userID = $2
             """,
-            channel_id, user_id,
+            channel_id,
+            user_id,
         )
         return
     async with conn.transaction():
@@ -278,11 +310,13 @@ async def leave_channel(
             INSERT INTO messages (channelID, content, posted_time, posted_by, system_kind)
             VALUES ($1, 'left the channel', timezone('America/New_York', NOW()), $2, 'leave')
             """,
-            channel_id, user_id,
+            channel_id,
+            user_id,
         )
         await conn.execute(
             "DELETE FROM channelmember WHERE channelID = $1 AND userID = $2",
-            channel_id, user_id,
+            channel_id,
+            user_id,
         )
 
 
@@ -305,7 +339,9 @@ async def join_channel(
     if not await _is_workspace_member(conn, user_id, ch["workspaceid"]):
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="channel not found")
     if ch["type"] != "public":
-        raise HTTPException(status.HTTP_403_FORBIDDEN, detail="only public channels can be joined directly")
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN, detail="only public channels can be joined directly"
+        )
 
     async with conn.transaction():
         added = await conn.fetchval(
@@ -315,7 +351,8 @@ async def join_channel(
             ON CONFLICT (channelID, userID) DO NOTHING
             RETURNING 1
             """,
-            channel_id, user_id,
+            channel_id,
+            user_id,
         )
         if added is not None:
             join_msg_id = await conn.fetchval(
@@ -324,7 +361,8 @@ async def join_channel(
                 VALUES ($1, 'joined the channel', timezone('America/New_York', NOW()), $2, 'join')
                 RETURNING messageID
                 """,
-                channel_id, user_id,
+                channel_id,
+                user_id,
             )
             creator_id = ch["created_by"]
             if creator_id and creator_id != user_id:
@@ -334,7 +372,8 @@ async def join_channel(
                     VALUES ($1, $2)
                     ON CONFLICT (messageID, mentioned_user) DO NOTHING
                     """,
-                    join_msg_id, creator_id,
+                    join_msg_id,
+                    creator_id,
                 )
     return {"ok": True}
 
@@ -363,7 +402,9 @@ async def invite_to_channel(
     if invitee_id is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="user not found")
     if not await _is_workspace_member(conn, invitee_id, ch["workspaceid"]):
-        raise HTTPException(status.HTTP_409_CONFLICT, detail="invitee is not a member of this workspace")
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, detail="invitee is not a member of this workspace"
+        )
     if await _is_channel_member(conn, invitee_id, channel_id):
         raise HTTPException(status.HTTP_409_CONFLICT, detail="user is already a channel member")
 
@@ -376,7 +417,9 @@ async def invite_to_channel(
                     (SELECT statusID FROM status WHERE type = 'pending'))
             RETURNING invitationID
             """,
-            channel_id, invitee_id, user_id,
+            channel_id,
+            invitee_id,
+            user_id,
         )
     except asyncpg.UniqueViolationError:
         raise HTTPException(status.HTTP_409_CONFLICT, detail="invitation already exists")
@@ -428,17 +471,25 @@ async def respond_channel_invitation(
              WHERE ci.invitationID = $1
                AND ci.invitee      = $2
             """,
-            invitation_id, user_id,
+            invitation_id,
+            user_id,
         )
         if inv is None:
             raise HTTPException(status.HTTP_404_NOT_FOUND, detail="invitation not found")
         if inv["status"] != "pending":
-            raise HTTPException(status.HTTP_409_CONFLICT, detail=f"invitation already {inv['status']}")
+            raise HTTPException(
+                status.HTTP_409_CONFLICT, detail=f"invitation already {inv['status']}"
+            )
 
         new_status = "accepted" if body.accept else "declined"
         await conn.execute(
-            "UPDATE channelinvitation SET status_type = (SELECT statusID FROM status WHERE type = $1) WHERE invitationID = $2",
-            new_status, invitation_id,
+            """
+            UPDATE channelinvitation
+            SET status_type = (SELECT statusID FROM status WHERE type = $1)
+            WHERE invitationID = $2
+            """,
+            new_status,
+            invitation_id,
         )
 
         if body.accept:
@@ -448,7 +499,8 @@ async def respond_channel_invitation(
                 VALUES ($1, $2, NOW())
                 ON CONFLICT (channelID, userID) DO NOTHING
                 """,
-                inv["channelid"], user_id,
+                inv["channelid"],
+                user_id,
             )
 
     return {"ok": True, "status": new_status}

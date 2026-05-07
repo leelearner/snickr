@@ -1,9 +1,9 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { workspaceApi } from "../../api/workspaces";
-import type { WorkspaceInvitation } from "../../types/api";
-import { errorMessage, formatDate } from "../../utils/format";
-import { queryKeys } from "../../utils/queryKeys";
-import { Button } from "../common/Button";
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { workspaceApi } from '../../api/workspaces';
+import type { WorkspaceInvitation } from '../../types/api';
+import { errorMessage, formatDate } from '../../utils/format';
+import { queryKeys } from '../../utils/queryKeys';
+import { Button } from '../common/Button';
 
 export function WorkspaceInvitationCard({ invitation }: { invitation: WorkspaceInvitation }) {
   const queryClient = useQueryClient();
@@ -28,7 +28,11 @@ export function WorkspaceInvitationCard({ invitation }: { invitation: WorkspaceI
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="secondary" isLoading={mutation.isPending} onClick={() => mutation.mutate(false)}>
+          <Button
+            variant="secondary"
+            isLoading={mutation.isPending}
+            onClick={() => mutation.mutate(false)}
+          >
             Decline
           </Button>
           <Button isLoading={mutation.isPending} onClick={() => mutation.mutate(true)}>
@@ -36,7 +40,9 @@ export function WorkspaceInvitationCard({ invitation }: { invitation: WorkspaceI
           </Button>
         </div>
       </div>
-      {mutation.error ? <p className="mt-3 text-sm text-red-600">{errorMessage(mutation.error)}</p> : null}
+      {mutation.error ? (
+        <p className="mt-3 text-sm text-red-600">{errorMessage(mutation.error)}</p>
+      ) : null}
     </article>
   );
 }

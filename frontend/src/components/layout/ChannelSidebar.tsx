@@ -1,22 +1,22 @@
-import { useState } from "react";
-import { Link, NavLink, useNavigate, useParams } from "react-router-dom";
-import { ChevronDown, ChevronRight, Hash, Lock, MessageSquare, Plus, Users, X } from "lucide-react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { channelApi } from "../../api/channels";
-import { workspaceApi } from "../../api/workspaces";
-import { Badge } from "../common/Badge";
-import { EmptyState } from "../common/EmptyState";
-import { ErrorState } from "../common/ErrorState";
-import { LoadingSpinner } from "../common/LoadingSpinner";
-import { CreateChannelDialog } from "../channels/CreateChannelDialog";
-import { JoinChannelButton } from "../channels/JoinChannelButton";
-import { channelDisplayName } from "../../utils/format";
-import { queryKeys } from "../../utils/queryKeys";
-import type { ChannelSummary, ChannelType } from "../../types/api";
+import { useState } from 'react';
+import { Link, NavLink, useNavigate, useParams } from 'react-router-dom';
+import { ChevronDown, ChevronRight, Hash, Lock, MessageSquare, Plus, Users, X } from 'lucide-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { channelApi } from '../../api/channels';
+import { workspaceApi } from '../../api/workspaces';
+import { Badge } from '../common/Badge';
+import { EmptyState } from '../common/EmptyState';
+import { ErrorState } from '../common/ErrorState';
+import { LoadingSpinner } from '../common/LoadingSpinner';
+import { CreateChannelDialog } from '../channels/CreateChannelDialog';
+import { JoinChannelButton } from '../channels/JoinChannelButton';
+import { channelDisplayName } from '../../utils/format';
+import { queryKeys } from '../../utils/queryKeys';
+import type { ChannelSummary, ChannelType } from '../../types/api';
 
 function ChannelIcon({ type }: { type: ChannelType }) {
-  if (type === "private") return <Lock className="h-4 w-4" />;
-  if (type === "direct") return <MessageSquare className="h-4 w-4" />;
+  if (type === 'private') return <Lock className="h-4 w-4" />;
+  if (type === 'direct') return <MessageSquare className="h-4 w-4" />;
   return <Hash className="h-4 w-4" />;
 }
 
@@ -29,12 +29,12 @@ export function ChannelSidebar({ workspaceId }: { workspaceId?: number }) {
   const params = useParams<{ channelId?: string }>();
   const activeChannelId = params.channelId ? Number(params.channelId) : undefined;
   const workspaceQuery = useQuery({
-    queryKey: workspaceId ? queryKeys.workspace(workspaceId) : ["workspace", "none"],
+    queryKey: workspaceId ? queryKeys.workspace(workspaceId) : ['workspace', 'none'],
     queryFn: () => workspaceApi.get(workspaceId!),
     enabled: Boolean(workspaceId),
   });
   const channelsQuery = useQuery({
-    queryKey: workspaceId ? queryKeys.channels(workspaceId) : ["channels", "none"],
+    queryKey: workspaceId ? queryKeys.channels(workspaceId) : ['channels', 'none'],
     queryFn: () => channelApi.list(workspaceId!),
     enabled: Boolean(workspaceId),
   });
@@ -64,8 +64,8 @@ export function ChannelSidebar({ workspaceId }: { workspaceId?: number }) {
 
   const workspace = workspaceQuery.data;
   const channels = channelsQuery.data ?? [];
-  const workspaceChannels = channels.filter((channel) => channel.type !== "direct");
-  const directChannels = channels.filter((channel) => channel.type === "direct");
+  const workspaceChannels = channels.filter((channel) => channel.type !== 'direct');
+  const directChannels = channels.filter((channel) => channel.type === 'direct');
 
   function renderChannel(channel: ChannelSummary) {
     const isActive = activeChannelId === channel.channelId;
@@ -74,8 +74,8 @@ export function ChannelSidebar({ workspaceId }: { workspaceId?: number }) {
         key={channel.channelId}
         className={`group flex items-center gap-1 rounded-md pr-1 text-sm transition ${
           isActive
-            ? "bg-blue-700 font-semibold text-white"
-            : "text-slate-300 hover:bg-slate-800 hover:text-white"
+            ? 'bg-blue-700 font-semibold text-white'
+            : 'text-slate-300 hover:bg-slate-800 hover:text-white'
         }`}
       >
         <NavLink
@@ -84,14 +84,14 @@ export function ChannelSidebar({ workspaceId }: { workspaceId?: number }) {
         >
           <ChannelIcon type={channel.type} />
           <span className="truncate">
-            {channel.type === "direct" ? channelDisplayName(channel) : channel.channelName}
+            {channel.type === 'direct' ? channelDisplayName(channel) : channel.channelName}
           </span>
           {!channel.isMember ? <Badge tone="amber">join</Badge> : null}
         </NavLink>
-        {!channel.isMember && channel.type === "public" ? (
+        {!channel.isMember && channel.type === 'public' ? (
           <JoinChannelButton channelId={channel.channelId} workspaceId={workspaceId!} compact />
         ) : null}
-        {channel.type === "direct" ? (
+        {channel.type === 'direct' ? (
           <button
             type="button"
             onClick={(event) => {
@@ -123,7 +123,11 @@ export function ChannelSidebar({ workspaceId }: { workspaceId?: number }) {
               onClick={() => setChannelsOpen((open) => !open)}
               className="flex min-w-0 flex-1 items-center gap-1 px-2 py-1 text-xs font-semibold uppercase tracking-wide text-slate-400 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
             >
-              {channelsOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+              {channelsOpen ? (
+                <ChevronDown className="h-3.5 w-3.5" />
+              ) : (
+                <ChevronRight className="h-3.5 w-3.5" />
+              )}
               Channels
             </button>
             <button
@@ -136,7 +140,10 @@ export function ChannelSidebar({ workspaceId }: { workspaceId?: number }) {
           </div>
           {channelsOpen ? (
             workspaceChannels.length === 0 ? (
-              <EmptyState title="No channels yet" description="Create a public or private channel." />
+              <EmptyState
+                title="No channels yet"
+                description="Create a public or private channel."
+              />
             ) : (
               <div className="mt-1 space-y-0.5">{workspaceChannels.map(renderChannel)}</div>
             )
@@ -147,7 +154,11 @@ export function ChannelSidebar({ workspaceId }: { workspaceId?: number }) {
             onClick={() => setDmsOpen((open) => !open)}
             className="flex w-full items-center gap-1 px-2 py-1 text-xs font-semibold uppercase tracking-wide text-slate-400 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
           >
-            {dmsOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+            {dmsOpen ? (
+              <ChevronDown className="h-3.5 w-3.5" />
+            ) : (
+              <ChevronRight className="h-3.5 w-3.5" />
+            )}
             Direct messages
           </button>
           {dmsOpen ? (

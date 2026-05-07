@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Annotated
 
-from pydantic import AfterValidator, BaseModel, Field, StringConstraints
+from pydantic import AfterValidator, BaseModel, StringConstraints
 
 
 # Trim leading/trailing whitespace before validating length, so a body of "   "

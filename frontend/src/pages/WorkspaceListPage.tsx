@@ -1,17 +1,17 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
-import { Plus } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
-import { workspaceApi } from "../api/workspaces";
-import { Avatar } from "../components/common/Avatar";
-import { Badge } from "../components/common/Badge";
-import { Button } from "../components/common/Button";
-import { EmptyState } from "../components/common/EmptyState";
-import { ErrorState } from "../components/common/ErrorState";
-import { LoadingSpinner } from "../components/common/LoadingSpinner";
-import { MainContent } from "../components/layout/MainContent";
-import { CreateWorkspaceDialog } from "../components/workspaces/CreateWorkspaceDialog";
-import { queryKeys } from "../utils/queryKeys";
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Plus } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { workspaceApi } from '../api/workspaces';
+import { Avatar } from '../components/common/Avatar';
+import { Badge } from '../components/common/Badge';
+import { Button } from '../components/common/Button';
+import { EmptyState } from '../components/common/EmptyState';
+import { ErrorState } from '../components/common/ErrorState';
+import { LoadingSpinner } from '../components/common/LoadingSpinner';
+import { MainContent } from '../components/layout/MainContent';
+import { CreateWorkspaceDialog } from '../components/workspaces/CreateWorkspaceDialog';
+import { queryKeys } from '../utils/queryKeys';
 
 export function WorkspaceListPage() {
   const [open, setOpen] = useState(false);
@@ -30,7 +30,10 @@ export function WorkspaceListPage() {
       {query.isLoading ? <LoadingSpinner /> : null}
       {query.error ? <ErrorState error={query.error} /> : null}
       {query.data?.length === 0 ? (
-        <EmptyState title="No workspaces yet" description="Create one to start channels, members, invites, and messages." />
+        <EmptyState
+          title="No workspaces yet"
+          description="Create one to start channels, members, invites, and messages."
+        />
       ) : null}
       <div className="grid gap-3 md:grid-cols-2">
         {query.data?.map((workspace) => (
@@ -43,9 +46,13 @@ export function WorkspaceListPage() {
               <Avatar name={workspace.name} className="h-12 w-12 text-base" />
               <div className="min-w-0 flex-1">
                 <h2 className="truncate font-semibold text-slate-950">{workspace.name}</h2>
-                <p className="mt-1 line-clamp-2 text-sm text-slate-500">{workspace.description ?? "No description"}</p>
+                <p className="mt-1 line-clamp-2 text-sm text-slate-500">
+                  {workspace.description ?? 'No description'}
+                </p>
               </div>
-              <Badge tone={workspace.myRole === "admin" ? "blue" : "neutral"}>{workspace.myRole}</Badge>
+              <Badge tone={workspace.myRole === 'admin' ? 'blue' : 'neutral'}>
+                {workspace.myRole}
+              </Badge>
             </div>
           </Link>
         ))}

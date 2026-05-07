@@ -1,14 +1,14 @@
-import { useEffect, useState } from "react";
-import { NavLink } from "react-router-dom";
-import { CircleUserRound, Home, Inbox, Plus, ShieldCheck, type LucideIcon } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
-import { workspaceApi } from "../../api/workspaces";
-import { channelApi } from "../../api/channels";
-import { mentionsApi } from "../../api/mentions";
-import { CreateWorkspaceDialog } from "../workspaces/CreateWorkspaceDialog";
-import { initials } from "../../utils/format";
-import { queryKeys } from "../../utils/queryKeys";
-import { INBOX_LAST_SEEN_KEY, INBOX_SEEN_EVENT, readInboxLastSeen } from "../../utils/inboxSeen";
+import { useEffect, useState } from 'react';
+import { NavLink } from 'react-router-dom';
+import { CircleUserRound, Home, Inbox, Plus, ShieldCheck, type LucideIcon } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { workspaceApi } from '../../api/workspaces';
+import { channelApi } from '../../api/channels';
+import { mentionsApi } from '../../api/mentions';
+import { CreateWorkspaceDialog } from '../workspaces/CreateWorkspaceDialog';
+import { initials } from '../../utils/format';
+import { queryKeys } from '../../utils/queryKeys';
+import { INBOX_LAST_SEEN_KEY, INBOX_SEEN_EVENT, readInboxLastSeen } from '../../utils/inboxSeen';
 
 interface RailNavProps {
   to: string;
@@ -26,8 +26,8 @@ function RailNav({ to, icon: Icon, label, end, badge }: RailNavProps) {
       className={({ isActive }) =>
         `relative flex w-full flex-col items-center gap-0.5 rounded-md px-1 py-1.5 text-[10px] font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white ${
           isActive
-            ? "bg-slate-800 text-white"
-            : "text-slate-300 hover:bg-slate-800 hover:text-white"
+            ? 'bg-slate-800 text-white'
+            : 'text-slate-300 hover:bg-slate-800 hover:text-white'
         }`
       }
     >
@@ -35,7 +35,7 @@ function RailNav({ to, icon: Icon, label, end, badge }: RailNavProps) {
       <span>{label}</span>
       {badge && badge > 0 ? (
         <span className="absolute right-0 top-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-semibold leading-none text-white">
-          {badge > 99 ? "99+" : badge}
+          {badge > 99 ? '99+' : badge}
         </span>
       ) : null}
     </NavLink>
@@ -75,10 +75,10 @@ export function WorkspaceRail({ selectedWorkspaceId }: { selectedWorkspaceId?: n
   useEffect(() => {
     const bump = () => setSeenTick((n) => n + 1);
     window.addEventListener(INBOX_SEEN_EVENT, bump);
-    window.addEventListener("storage", bump);
+    window.addEventListener('storage', bump);
     return () => {
       window.removeEventListener(INBOX_SEEN_EVENT, bump);
-      window.removeEventListener("storage", bump);
+      window.removeEventListener('storage', bump);
     };
   }, []);
   const lastSeen = readInboxLastSeen();
@@ -108,9 +108,7 @@ export function WorkspaceRail({ selectedWorkspaceId }: { selectedWorkspaceId?: n
               to={`/app/workspaces/${workspace.workspaceId}`}
               title={workspace.name}
               className={`flex h-10 w-10 items-center justify-center rounded-md text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white ${
-                active
-                  ? "bg-blue-700 text-white"
-                  : "bg-slate-800 text-slate-200 hover:bg-slate-700"
+                active ? 'bg-blue-700 text-white' : 'bg-slate-800 text-slate-200 hover:bg-slate-700'
               }`}
             >
               {initials(workspace.name)}

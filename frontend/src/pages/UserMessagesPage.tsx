@@ -1,21 +1,21 @@
-import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Hash, MessageSquare } from "lucide-react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { channelApi } from "../api/channels";
-import { messageApi } from "../api/messages";
-import { workspaceApi } from "../api/workspaces";
-import { useAuth } from "../context/AuthContext";
-import { Avatar } from "../components/common/Avatar";
-import { Button } from "../components/common/Button";
-import { EmptyState } from "../components/common/EmptyState";
-import { ErrorState } from "../components/common/ErrorState";
-import { LoadingSpinner } from "../components/common/LoadingSpinner";
-import { MainContent } from "../components/layout/MainContent";
-import { errorMessage, formatDate } from "../utils/format";
-import { displayName as safeDisplayName } from "../utils/displayName";
-import { queryKeys } from "../utils/queryKeys";
-import { renderMessageContent } from "../utils/renderContent";
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { ArrowLeft, Hash, MessageSquare } from 'lucide-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { channelApi } from '../api/channels';
+import { messageApi } from '../api/messages';
+import { workspaceApi } from '../api/workspaces';
+import { useAuth } from '../context/useAuth';
+import { Avatar } from '../components/common/Avatar';
+import { Button } from '../components/common/Button';
+import { EmptyState } from '../components/common/EmptyState';
+import { ErrorState } from '../components/common/ErrorState';
+import { LoadingSpinner } from '../components/common/LoadingSpinner';
+import { MainContent } from '../components/layout/MainContent';
+import { errorMessage, formatDate } from '../utils/format';
+import { displayName as safeDisplayName } from '../utils/displayName';
+import { queryKeys } from '../utils/queryKeys';
+import { renderMessageContent } from '../utils/renderContent';
 
 export function UserMessagesPage() {
   const { userId } = useParams();
@@ -24,10 +24,11 @@ export function UserMessagesPage() {
   const queryClient = useQueryClient();
   const { user: currentUser } = useAuth();
   const numericUserId = Number(userId);
-  const fromWorkspaceParam = Number(params.get("from"));
-  const fromWorkspaceId = Number.isFinite(fromWorkspaceParam) && fromWorkspaceParam > 0 ? fromWorkspaceParam : null;
+  const fromWorkspaceParam = Number(params.get('from'));
+  const fromWorkspaceId =
+    Number.isFinite(fromWorkspaceParam) && fromWorkspaceParam > 0 ? fromWorkspaceParam : null;
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [dmError, setDmError] = useState("");
+  const [dmError, setDmError] = useState('');
 
   const query = useQuery({
     queryKey: queryKeys.userMessages(numericUserId),
@@ -50,7 +51,7 @@ export function UserMessagesPage() {
   });
 
   useEffect(() => {
-    setDmError("");
+    setDmError('');
   }, [numericUserId]);
 
   const first = query.data?.[0];
@@ -71,12 +72,13 @@ export function UserMessagesPage() {
     return Array.from(seen, ([workspaceId, workspaceName]) => ({ workspaceId, workspaceName }));
   }, [query.data, myWorkspacesQuery.data]);
 
-  const directDmWorkspaceId = fromWorkspaceId && sharedWorkspaces.some((w) => w.workspaceId === fromWorkspaceId)
-    ? fromWorkspaceId
-    : null;
+  const directDmWorkspaceId =
+    fromWorkspaceId && sharedWorkspaces.some((w) => w.workspaceId === fromWorkspaceId)
+      ? fromWorkspaceId
+      : null;
 
   function startDm(workspaceId: number) {
-    setDmError("");
+    setDmError('');
     setPickerOpen(false);
     dmMutation.mutate(workspaceId);
   }
@@ -153,7 +155,9 @@ export function UserMessagesPage() {
       </div>
       {dmError ? <p className="mt-3 text-sm text-red-600">{dmError}</p> : null}
       <h2 className="mt-6 text-sm font-semibold text-slate-700">
-        {query.data ? `${query.data.length} message${query.data.length === 1 ? "" : "s"}` : "Messages"}
+        {query.data
+          ? `${query.data.length} message${query.data.length === 1 ? '' : 's'}`
+          : 'Messages'}
       </h2>
       <div className="mt-3 space-y-2">
         {query.isLoading ? <LoadingSpinner /> : null}

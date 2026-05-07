@@ -1,18 +1,18 @@
-import { useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { LogOut, Trash2, UserPlus } from "lucide-react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { workspaceApi } from "../api/workspaces";
-import { useAuth } from "../context/AuthContext";
-import { Button } from "../components/common/Button";
-import { ErrorState } from "../components/common/ErrorState";
-import { LoadingSpinner } from "../components/common/LoadingSpinner";
-import { MainContent } from "../components/layout/MainContent";
-import { InviteWorkspaceUserDialog } from "../components/workspaces/InviteWorkspaceUserDialog";
-import { MemberRow } from "../components/workspaces/MemberRow";
-import { StaleChannelInvitesCard } from "../components/workspaces/StaleChannelInvitesCard";
-import { errorMessage } from "../utils/format";
-import { queryKeys } from "../utils/queryKeys";
+import { useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { LogOut, Trash2, UserPlus } from 'lucide-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { workspaceApi } from '../api/workspaces';
+import { useAuth } from '../context/useAuth';
+import { Button } from '../components/common/Button';
+import { ErrorState } from '../components/common/ErrorState';
+import { LoadingSpinner } from '../components/common/LoadingSpinner';
+import { MainContent } from '../components/layout/MainContent';
+import { InviteWorkspaceUserDialog } from '../components/workspaces/InviteWorkspaceUserDialog';
+import { MemberRow } from '../components/workspaces/MemberRow';
+import { StaleChannelInvitesCard } from '../components/workspaces/StaleChannelInvitesCard';
+import { errorMessage } from '../utils/format';
+import { queryKeys } from '../utils/queryKeys';
 
 export function WorkspaceMembersPage() {
   const { workspaceId } = useParams();
@@ -20,7 +20,7 @@ export function WorkspaceMembersPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [inviteOpen, setInviteOpen] = useState(false);
-  const [danger, setDanger] = useState("");
+  const [danger, setDanger] = useState('');
   const { user } = useAuth();
   const query = useQuery({
     queryKey: queryKeys.workspace(numericWorkspaceId),
@@ -32,7 +32,7 @@ export function WorkspaceMembersPage() {
     mutationFn: () => workspaceApi.removeMember(numericWorkspaceId, user!.userId),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
-      navigate("/app/workspaces");
+      navigate('/app/workspaces');
     },
     onError: (err) => setDanger(errorMessage(err)),
   });
@@ -41,16 +41,21 @@ export function WorkspaceMembersPage() {
     mutationFn: () => workspaceApi.delete(numericWorkspaceId),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
-      navigate("/app/workspaces");
+      navigate('/app/workspaces');
     },
     onError: (err) => setDanger(errorMessage(err)),
   });
 
   if (query.isLoading) return <LoadingSpinner />;
-  if (query.error) return <MainContent><ErrorState error={query.error} /></MainContent>;
+  if (query.error)
+    return (
+      <MainContent>
+        <ErrorState error={query.error} />
+      </MainContent>
+    );
   const workspace = query.data;
   if (!workspace) return null;
-  const canManage = workspace.myRole === "admin";
+  const canManage = workspace.myRole === 'admin';
 
   return (
     <MainContent>
@@ -66,8 +71,12 @@ export function WorkspaceMembersPage() {
             variant="ghost"
             leftIcon={<LogOut className="h-4 w-4" />}
             onClick={() => {
-              setDanger("");
-              if (window.confirm(`Leave ${workspace.name}? You will lose access to its channels and messages.`)) {
+              setDanger('');
+              if (
+                window.confirm(
+                  `Leave ${workspace.name}? You will lose access to its channels and messages.`,
+                )
+              ) {
                 leaveMutation.mutate();
               }
             }}
@@ -102,7 +111,8 @@ export function WorkspaceMembersPage() {
         <section className="mt-8 rounded-lg border border-red-200 bg-red-50 p-4">
           <h2 className="text-sm font-semibold text-red-800">Danger zone</h2>
           <p className="mt-1 text-xs text-red-700">
-            Deleting the workspace removes its channels, messages, and memberships for everyone. This cannot be undone.
+            Deleting the workspace removes its channels, messages, and memberships for everyone.
+            This cannot be undone.
           </p>
           <Button
             variant="danger"
@@ -110,7 +120,7 @@ export function WorkspaceMembersPage() {
             leftIcon={<Trash2 className="h-4 w-4" />}
             isLoading={deleteMutation.isPending}
             onClick={() => {
-              setDanger("");
+              setDanger('');
               if (window.confirm(`Delete ${workspace.name} for everyone? This cannot be undone.`)) {
                 deleteMutation.mutate();
               }

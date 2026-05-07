@@ -1,6 +1,14 @@
-import type { ReactNode } from "react";
+import type { ReactNode } from 'react';
 
-export function AuthLayout({ title, subtitle, children }: { title: string; subtitle: string; children: ReactNode }) {
+export function AuthLayout({
+  title,
+  subtitle,
+  children,
+}: {
+  title: string;
+  subtitle: string;
+  children: ReactNode;
+}) {
   return (
     <div className="grid min-h-screen place-items-center bg-gradient-to-b from-slate-100 to-slate-200 px-4 py-6">
       <div className="w-full max-w-md">

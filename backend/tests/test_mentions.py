@@ -16,14 +16,19 @@ async def _three_member_channel(make_client, uid):
 
     ws_id = (await alice.post("/api/workspaces", json={"name": f"ws_{uid}"})).json()["workspaceId"]
     for invitee in (b, c):
-        await alice.post(f"/api/workspaces/{ws_id}/invitations", json={"username": invitee["username"]})
+        await alice.post(
+            f"/api/workspaces/{ws_id}/invitations", json={"username": invitee["username"]}
+        )
     inv_b = (await bob.get("/api/me/workspace-invitations")).json()[0]["invitationId"]
     inv_c = (await carol.get("/api/me/workspace-invitations")).json()[0]["invitationId"]
     await bob.post(f"/api/me/workspace-invitations/{inv_b}", json={"accept": True})
     await carol.post(f"/api/me/workspace-invitations/{inv_c}", json={"accept": True})
 
-    ch_id = (await alice.post(f"/api/workspaces/{ws_id}/channels",
-                              json={"channelName": "team", "type": "public"})).json()["channelId"]
+    ch_id = (
+        await alice.post(
+            f"/api/workspaces/{ws_id}/channels", json={"channelName": "team", "type": "public"}
+        )
+    ).json()["channelId"]
     await bob.post(f"/api/channels/{ch_id}/join")
     await carol.post(f"/api/channels/{ch_id}/join")
     return alice, bob, carol, a, b, c, ws_id, ch_id
@@ -31,8 +36,9 @@ async def _three_member_channel(make_client, uid):
 
 async def test_mention_creates_inbox_entry(make_client, uid):
     alice, bob, _, a, b, _, _, ch_id = await _three_member_channel(make_client, uid)
-    await alice.post(f"/api/channels/{ch_id}/messages",
-                     json={"content": f"hey @{b['username']} look at this"})
+    await alice.post(
+        f"/api/channels/{ch_id}/messages", json={"content": f"hey @{b['username']} look at this"}
+    )
 
     inbox = (await bob.get("/api/me/mentions")).json()
     assert len(inbox) == 1
@@ -52,31 +58,40 @@ async def test_mentioning_non_channel_member_is_silently_dropped(make_client, ui
 
     ws_id = (await alice.post("/api/workspaces", json={"name": f"ws_{uid}"})).json()["workspaceId"]
     for invitee in (b, c):
-        await alice.post(f"/api/workspaces/{ws_id}/invitations", json={"username": invitee["username"]})
+        await alice.post(
+            f"/api/workspaces/{ws_id}/invitations", json={"username": invitee["username"]}
+        )
     inv_b = (await bob.get("/api/me/workspace-invitations")).json()[0]["invitationId"]
     inv_c = (await carol.get("/api/me/workspace-invitations")).json()[0]["invitationId"]
     await bob.post(f"/api/me/workspace-invitations/{inv_b}", json={"accept": True})
     await carol.post(f"/api/me/workspace-invitations/{inv_c}", json={"accept": True})
 
     # Private channel, only alice and bob
-    ch_id = (await alice.post(f"/api/workspaces/{ws_id}/channels",
-                              json={"channelName": "exec", "type": "private"})).json()["channelId"]
+    ch_id = (
+        await alice.post(
+            f"/api/workspaces/{ws_id}/channels", json={"channelName": "exec", "type": "private"}
+        )
+    ).json()["channelId"]
     # Invite bob to the channel
     await alice.post(f"/api/channels/{ch_id}/invitations", json={"username": b["username"]})
     cinv = (await bob.get("/api/me/channel-invitations")).json()[0]["invitationId"]
     await bob.post(f"/api/me/channel-invitations/{cinv}", json={"accept": True})
 
     # Alice mentions carol who is not a channel member
-    await alice.post(f"/api/channels/{ch_id}/messages",
-                     json={"content": f"private @{c['username']} note"})
+    await alice.post(
+        f"/api/channels/{ch_id}/messages", json={"content": f"private @{c['username']} note"}
+    )
 
     assert (await carol.get("/api/me/mentions")).json() == []
 
 
 async def test_editing_message_resyncs_mentions(make_client, uid):
     alice, bob, carol, _, b, c, _, ch_id = await _three_member_channel(make_client, uid)
-    posted = (await alice.post(f"/api/channels/{ch_id}/messages",
-                               json={"content": f"hi @{b['username']}"})).json()
+    posted = (
+        await alice.post(
+            f"/api/channels/{ch_id}/messages", json={"content": f"hi @{b['username']}"}
+        )
+    ).json()
     assert len((await bob.get("/api/me/mentions")).json()) == 1
     assert (await carol.get("/api/me/mentions")).json() == []
 
@@ -92,8 +107,11 @@ async def test_editing_message_resyncs_mentions(make_client, uid):
 
 async def test_deleting_message_clears_mention(make_client, uid):
     alice, bob, _, _, b, _, _, ch_id = await _three_member_channel(make_client, uid)
-    posted = (await alice.post(f"/api/channels/{ch_id}/messages",
-                               json={"content": f"@{b['username']} ping"})).json()
+    posted = (
+        await alice.post(
+            f"/api/channels/{ch_id}/messages", json={"content": f"@{b['username']} ping"}
+        )
+    ).json()
     assert len((await bob.get("/api/me/mentions")).json()) == 1
 
     await alice.delete(f"/api/channels/{ch_id}/messages/{posted['messageId']}")
@@ -112,8 +130,11 @@ async def test_join_inserts_system_message_and_kind_join_for_creator(make_client
     inv_b = (await bob.get("/api/me/workspace-invitations")).json()[0]["invitationId"]
     await bob.post(f"/api/me/workspace-invitations/{inv_b}", json={"accept": True})
 
-    ch_id = (await alice.post(f"/api/workspaces/{ws_id}/channels",
-                              json={"channelName": "team", "type": "public"})).json()["channelId"]
+    ch_id = (
+        await alice.post(
+            f"/api/workspaces/{ws_id}/channels", json={"channelName": "team", "type": "public"}
+        )
+    ).json()["channelId"]
     await bob.post(f"/api/channels/{ch_id}/join")
 
     msgs = (await alice.get(f"/api/channels/{ch_id}/messages")).json()
@@ -141,8 +162,11 @@ async def test_system_message_cannot_be_edited_or_deleted(make_client, uid):
     inv_b = (await bob.get("/api/me/workspace-invitations")).json()[0]["invitationId"]
     await bob.post(f"/api/me/workspace-invitations/{inv_b}", json={"accept": True})
 
-    ch_id = (await alice.post(f"/api/workspaces/{ws_id}/channels",
-                              json={"channelName": "team", "type": "public"})).json()["channelId"]
+    ch_id = (
+        await alice.post(
+            f"/api/workspaces/{ws_id}/channels", json={"channelName": "team", "type": "public"}
+        )
+    ).json()["channelId"]
     await bob.post(f"/api/channels/{ch_id}/join")
 
     msgs = (await alice.get(f"/api/channels/{ch_id}/messages")).json()
@@ -166,8 +190,11 @@ async def test_dm_message_creates_kind_dm_inbox(make_client, uid):
     inv_b = (await bob.get("/api/me/workspace-invitations")).json()[0]["invitationId"]
     await bob.post(f"/api/me/workspace-invitations/{inv_b}", json={"accept": True})
 
-    dm_id = (await alice.post(f"/api/workspaces/{ws_id}/direct-messages",
-                              json={"targetUserId": b["userId"]})).json()["channelId"]
+    dm_id = (
+        await alice.post(
+            f"/api/workspaces/{ws_id}/direct-messages", json={"targetUserId": b["userId"]}
+        )
+    ).json()["channelId"]
     await alice.post(f"/api/channels/{dm_id}/messages", json={"content": "hi"})
 
     inbox = (await bob.get("/api/me/mentions")).json()

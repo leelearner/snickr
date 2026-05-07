@@ -1,18 +1,18 @@
-import { Link } from "react-router-dom";
-import { initials } from "../../utils/format";
+import { Link } from 'react-router-dom';
+import { initials } from '../../utils/format';
 
 const PALETTE = [
-  "bg-rose-500",
-  "bg-orange-500",
-  "bg-amber-600",
-  "bg-emerald-600",
-  "bg-teal-600",
-  "bg-sky-600",
-  "bg-blue-600",
-  "bg-indigo-600",
-  "bg-violet-600",
-  "bg-fuchsia-600",
-  "bg-pink-600",
+  'bg-rose-500',
+  'bg-orange-500',
+  'bg-amber-600',
+  'bg-emerald-600',
+  'bg-teal-600',
+  'bg-sky-600',
+  'bg-blue-600',
+  'bg-indigo-600',
+  'bg-violet-600',
+  'bg-fuchsia-600',
+  'bg-pink-600',
 ];
 
 function colorFor(name: string): string {
@@ -30,9 +30,9 @@ interface AvatarProps {
   className?: string;
 }
 
-export function Avatar({ name, userId, fromWorkspaceId, className = "" }: AvatarProps) {
-  const seed = (name ?? "").trim() || "?";
-  const bg = seed === "?" ? "bg-slate-300" : colorFor(seed);
+export function Avatar({ name, userId, fromWorkspaceId, className = '' }: AvatarProps) {
+  const seed = (name ?? '').trim() || '?';
+  const bg = seed === '?' ? 'bg-slate-300' : colorFor(seed);
   const baseClass = `flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-sm font-semibold text-white ${bg} ${className}`;
 
   if (userId) {
@@ -43,7 +43,7 @@ export function Avatar({ name, userId, fromWorkspaceId, className = "" }: Avatar
       <Link
         to={href}
         className={`${baseClass} transition hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 focus-visible:ring-offset-1`}
-        title={name ? `View ${name}` : "View user"}
+        title={name ? `View ${name}` : 'View user'}
       >
         {initials(name)}
       </Link>

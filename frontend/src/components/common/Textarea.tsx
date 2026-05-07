@@ -1,11 +1,11 @@
-import type { TextareaHTMLAttributes } from "react";
+import type { TextareaHTMLAttributes } from 'react';
 
 interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
   label?: string;
   error?: string;
 }
 
-export function Textarea({ label, error, className = "", id, ...props }: TextareaProps) {
+export function Textarea({ label, error, className = '', id, ...props }: TextareaProps) {
   const inputId = id ?? props.name;
   return (
     <label className="block">
