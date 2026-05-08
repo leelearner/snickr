@@ -447,37 +447,25 @@ guarantee of Section 3.2: every value is bound through asyncpg's
 
 **Messaging.**
 
-- `post_message`. Parameterised SQL in `messages.py`. Asserts the
-  caller's channel membership. If the request body carries a
-  `parentMessageId`, the handler verifies that the parent exists in the
-  same channel and is not a system message; the post is then a thread
-  reply. The `INSERT INTO messages (channelID, content, posted_by, parent_messageID)`
-  statement records the row, with `posted_time` taking the
-  `America/New_York` default. Returns the new message row including
-  `posted_time`, `parentMessageId`, the initial `replyCount`, and the
-  poster's display name.
+- `post_message`. Parameterised SQL in `messages.py`. Inserts into
+  `messages` after asserting channel membership. If a `parentMessageId`
+  is present, the handler verifies the parent is in the same channel,
+  is not a system message, and is itself top-level (Section 7.12).
 - `list_thread_replies`. Parameterised SQL in `messages.py`. Returns
-  every message whose `parent_messageID` matches a given message,
-  ordered by `posted_time`. Used by the Thread side panel in the
-  frontend to render replies under a parent.
-- `get_channel_messages`. Parameterised SQL in `messages.py`. Asserts
-  the caller's channel membership, then runs
-  `SELECT m.*, u.username, u.nickname FROM messages m JOIN users u ON u.userID = m.posted_by WHERE m.channelID = $1 ORDER BY m.posted_time, m.messageID`.
-  The `idx_messages_channel` index covers the filter, and the secondary
-  order on `messageID` is the primary key for stability.
+  every message whose `parent_messageID` matches a given parent.
+- `get_channel_messages`. Parameterised SQL in `messages.py`. Returns
+  the channel timeline ordered by `posted_time` then `messageID`. The
+  `idx_messages_channel` index covers the filter.
 - `get_user_messages`. Parameterised SQL in `messages.py`. Lists every
   message posted by a given user, scoped to channels the caller can see.
-  Joins `messages` to `channels`, `workspaces`, and `channelmember`
-  filtered by the caller. Used by `GET /api/users/{id}/messages`.
 
 **Search.**
 
 - `search_messages`. Parameterised SQL in `messages.py`. Substring
-  search across messages the caller can read. The query is
-  `SELECT m.*, w.name, c.channel_name FROM messages m JOIN channels c ... JOIN channelmember cm ON cm.channelID = m.channelID AND cm.userID = $1 WHERE m.content ILIKE $2`,
-  with the second parameter bound as `f"%{q}%"`. The `ILIKE` wildcards
-  live in the bound value, not in the SQL text, so a user query of
-  `100%` searches for the literal string `100%`.
+  search joined through `channelmember` so the result set is intersected
+  with the caller's visible channels. The wildcards live in the bound
+  value `f"%{q}%"`, not in the SQL text, so a user query of `100%`
+  searches for the literal string `100%`.
 - `search_channels` is not exposed as its own endpoint. The frontend's
   channel sidebar already shows every channel the user can see, so a
   channel search would duplicate the existing list endpoint.
@@ -574,23 +562,13 @@ already-accepted invitation or hitting a unique constraint return 409
 rather than 400, so the frontend can distinguish "your input was
 malformed" from "the server state already disagrees with your action".
 
-**Membership exit.** Two endpoints let a user remove themselves from
-shared resources. `POST /api/channels/{id}/leave` deletes the caller's
-row from `channelmember` for any public or private channel they belong
-to, and returns 204. Direct-message channels follow a softer rule because
-both participants are part of the conversation by construction: the same
-endpoint sets `channelmember.hidden_at = NOW()` on the leaver's row
-without deleting it, so the message history is preserved and the
-partner's view is unaffected. The DM reappears in the leaver's list when
-they reopen it through the direct-message endpoint or when the partner
-posts a new message. `DELETE /api/workspaces/{id}` disbands an entire
-workspace and is restricted to administrators. The foreign-key cascade
-on `workspaces` removes the channels, members, and invitations in a
-single statement, so no extra clean-up logic is needed in the handler. A
-separate guard prevents the last administrator from demoting or removing
-themselves through the role-change endpoint, since that would leave the
-workspace ungoverned. The disband path is the supported way to retire a
-workspace whose last admin also wants to leave.
+**Membership exit.** `POST /api/channels/{id}/leave` deletes the
+caller's `channelmember` row for a public or private channel. For a
+direct-message channel the same endpoint sets `hidden_at` instead, so
+the timeline survives for both participants (Section 7.8).
+`DELETE /api/workspaces/{id}` disbands an entire workspace through the
+foreign-key cascade on `workspaces` and is the supported way to retire
+a workspace whose last admin also wants to leave.
 
 **Inbox event log.** The `mentions` table stores three kinds of Inbox
 events under the same row format. A regular `@username` mention writes
@@ -646,25 +624,12 @@ where asyncpg sends the SQL and the bound argument as separate fields in
 the Postgres extended-query protocol. The user text is always a value
 and never grammar.
 
-**Edge cases.** A username containing a single quote, a workspace
-description containing a backslash, a message that begins with two
-hyphens, and a search query of `100%` are all handled correctly without
-any code change because every value travels through the same binding
-mechanism. The search endpoint binds the wildcard string `f"%{q}%"` as
-a single argument, so a user query of `100%` searches for the literal
-string `100%` rather than expanding into a wildcard. SQL keywords inside
-message content are never interpreted as SQL because they are part of a
-bound value, not part of the query text. The same property holds for
-`@username` mention parsing on message creation and edit. A regex
-extracts candidate handles from the message text in Python, the
-resulting list is passed to Postgres as a bound `text[]` argument with
-`username = ANY($1::text[])`, and the lookup never builds a `WHERE`
-clause out of user-supplied substrings.
-
-**Result.** The SQL injection guarantee in this project is structural
-rather than convention-based. Defeating it would require replacing
-asyncpg's parameter API with raw SQL, which would be a noisy change far
-outside the established pattern.
+**Mention parsing follows the same rule.** A regex extracts candidate
+handles from the message text in Python, then the list is passed to
+Postgres as a bound `text[]` argument with
+`username = ANY($1::text[])`. The lookup never builds a `WHERE` clause
+out of user-supplied substrings, so the same structural guarantee
+applies.
 
 ### 3.3 Concurrency control and transactions
 
@@ -855,16 +820,11 @@ each limits the damage of a hypothetical render-layer mistake.
 
 ## 7. Session Logs
 
-The system was driven through an end-to-end multi-user session against a
-freshly seeded database to demonstrate every feature claimed in
-Sections 2 and 3. The driver script is committed at
-`docs/session-logs/run_session.sh`. Its output, sliced from the backend
-log file between the start and end of the run, is committed at
-`docs/session-logs/session-2026-05-08.txt`. The matching screenshots
-were captured by Playwright scripts in the same directory against the
-running React frontend. The driver inserts `### [HH:MM:SS] description`
-markers between API calls so the captured transcript reads as narrative
-rather than as a flat event stream.
+`docs/session-logs/run_session.sh` drives an end-to-end multi-user
+session against a freshly seeded database. The captured backend log
+is at `docs/session-logs/session-2026-05-08.txt` and the Playwright
+screenshots are in the same directory. The `### [HH:MM:SS]` headers
+in the excerpts below come from the driver, not the backend.
 
 ### 7.1 Authentication and workspace navigation
 
@@ -893,12 +853,9 @@ timeline including the seeded conversation history.
 
 ### 7.2 Mentions and the Inbox
 
-Chess posts an announcement that mentions Bob. The post handler parses
-`@bob` from the body, joins it against `channelmember`, and inserts a
-`mentions` row addressed to Bob. The structured event records the
-parsed mention count alongside the new `messageId`. Bob then signs in
-from a second browser, opens the Inbox, and sees the new entry under
-the `mention` group.
+Chess posts an announcement that mentions Bob. Bob signs in from a
+second browser, opens the Inbox, and sees the new entry under the
+`mention` group.
 
 ![Figure 5: Bob's Inbox after Chess's announcement. The mention is grouped under MENTIONS, while the seeded direct message from Chess sits under DIRECT MESSAGES. The classifier reads from `channeltype` and `messages.system_kind` rather than matching on message content.](../session-logs/screenshots/11_bob_inbox_with_seeded_mention.png)
 
@@ -918,18 +875,13 @@ that step contains all three event kinds.
 
 ### 7.3 Editing, deleting, and searching messages
 
-Chess hovers her own announcement, clicks the inline pencil, and edits
-the content. The PATCH handler updates `messages.content`, sets
-`messages.edited_time` to the wall-clock time, deletes the existing
-mention rows for that message, and re-parses mentions from the new
-content. The UI displays the resulting `edited` marker.
+Chess edits her own announcement inline. The edit re-parses mentions
+from the new body so the Inbox stays in sync with the message text.
 
 ![Figure 6: Inline edit. The textarea replaces the rendered message, and Save is disabled while the mutation is pending. Bob's pencil icon is hidden on Chess's messages, and a hand-crafted PATCH from Bob's session returns 403.](../session-logs/screenshots/18_edit_message_inline.png)
 
-Chess then performs a substring search. The handler binds the query as
-a single asyncpg argument with `WHERE m.content ILIKE $2` and joins
-through `channelmember` so the result set is intersected with the
-channels Chess can read.
+Chess then searches for `demo`. The query is intersected with
+`channelmember`, so private-channel hits leak only to channel members.
 
 ![Figure 7: Search results for `demo`. Four messages match across `#general`, `#project-snickr`, and the private `#office-hours`. Bob running the same search would see only the public hits because his row is missing from `channelmember` for the private channel.](../session-logs/screenshots/06_chess_search_results.png)
 
@@ -948,14 +900,10 @@ channels Chess can read.
 
 ### 7.4 Workspace invitation acceptance through a stored procedure
 
-Dave logs in, lists his pending invitations, and accepts the one to
-NYU CS6083. The handler delegates to `accept_workspace_invitation`,
-which runs as a single PL/pgSQL function. It reads the invitation row
-joined with `status`, refuses the call if the row is not addressed to
-the caller or is already responded to, updates the invitation status,
-and inserts the membership row with `ON CONFLICT DO NOTHING`. The whole
-sequence either commits as a unit or rolls back, so two simultaneous
-accepts cannot both succeed.
+Dave logs in and accepts his pending invitation to NYU CS6083. The
+accept path runs through the `accept_workspace_invitation` stored
+procedure (Section 2.4), so the invitation status update and the
+membership insert commit together.
 
 ![Figure 8: Dave's view before accepting. The pending invitation card sits above the workspace list with explicit Accept and Decline buttons.](../session-logs/screenshots/13_dave_workspace_list_with_pending_invite.png)
 
@@ -971,19 +919,14 @@ accepts cannot both succeed.
 
 ### 7.5 Channel creation through a stored procedure and the `join` event
 
-Chess clicks the `+` next to CHANNELS, names the new channel `ship-it`,
-selects Public, and confirms. The handler invokes
-`create_channel_for_member`, which checks workspace membership, looks
-up the channel-type identifier, inserts the `channels` row, and inserts
-the creator into `channelmember`, all inside one PL/pgSQL function.
+Chess creates a new public channel `#ship-it` through the
+`create_channel_for_member` stored procedure (Section 2.4).
 
 ![Figure 9: Create channel modal. The Type radio choice maps to `channeltype.name` and is resolved inside the stored procedure to `channeltype.typeID`.](../session-logs/screenshots/15_create_channel_modal.png)
 
-Dave then opens the public-channel list and clicks Join on `#ship-it`.
-The join handler inserts a `channelmember` row, writes a system message
-with `system_kind='join'`, and inserts a `mentions` row addressed to
-the channel creator. Chess's Inbox now contains all three event
-classifications: `mention`, `dm`, and `join`.
+Dave self-joins `#ship-it`. The join writes a `system_kind='join'`
+message and a mention to the creator, so Chess's Inbox now contains
+all three event kinds: `mention`, `dm`, and `join`.
 
 ```
 ### [18:36:14] chess creates a new public channel #ship-it (calls create_channel_for_member SP)
@@ -995,27 +938,23 @@ classifications: `mention`, `dm`, and `join`.
 2026-05-07 18:36:15 INFO  snickr.http  GET  /api/me/mentions 200 uid=1 20ms
 ```
 
-The mention parser runs in real time as a user types. The composer
-shows a fuzzy-matching dropdown of channel members whose username or
-nickname starts with the substring after the most recent `@`.
+Mention autocomplete in the composer surfaces channel members whose
+username or nickname starts with the substring after the most recent
+`@`.
 
 ![Figure 10: Mention autocomplete in the composer. Typing `@bo` surfaces Bob Garcia from the channel member list. Selecting a candidate inserts the canonical `@username` into the body, which the post handler then resolves through the same channel-membership join.](../session-logs/screenshots/19_mention_autocomplete.png)
 
 ### 7.6 Channel invitation flow on a private channel
 
 Chess creates a private channel `release-prep`. Alice cannot see it
-through the channel list, and a direct `GET /api/channels/{id}` returns
+in the channel list, and a direct `GET /api/channels/{id}` returns
 404 rather than 403, so the channel's existence is hidden from
-non-members. Chess opens the Invite people dialog and adds Alice by
-username.
+non-members. Chess invites Alice by username.
 
 ![Figure 11: Invite people dialog opened from the channel header. The username goes through Pydantic length validation before reaching SQL.](../session-logs/screenshots/17_invite_to_channel_modal.png)
 
-Alice sees the new channel invitation in her invitations list and
-accepts. The accept path runs an update on `channelinvitation` plus an
-`INSERT INTO channelmember ON CONFLICT DO NOTHING` inside one
-`async with conn.transaction()` block, so the invitation status and
-the membership row commit together.
+Alice accepts. The status update and membership insert commit together
+inside one transaction.
 
 ```
 ### [18:36:15] chess creates a private channel #release-prep
@@ -1030,16 +969,12 @@ the membership row commit together.
 
 ### 7.7 Last-admin guard
 
-Alice is the only administrator of the Roommates workspace. When she
-clicks Demote on her own row, the role-change handler counts admins,
-finds the count is one, and refuses the change with a 409 response.
-The error is rendered inline below her row.
+Alice is the only administrator of the Roommates workspace. Demoting
+herself fails with 409 (see Section 3.3 for the locking shape).
 
 ![Figure 12: Last-admin guard refusal. The red text comes from the handler's response detail rather than a client-side check, so the same protection applies if a user constructs the PATCH by hand.](../session-logs/screenshots/20_last_admin_guard_error.png)
 
-After Alice promotes Bob to admin first, the same call succeeds. The
-guard evaluates the same count again and now sees two admins, so the
-demotion is allowed.
+After promoting Bob to admin first, the same demotion succeeds.
 
 ```
 ### [18:36:17] alice (sole admin of Roommates) tries to demote herself - last-admin guard refuses with 409
@@ -1053,20 +988,15 @@ demotion is allowed.
 
 ### 7.8 Direct messages and the soft-delete pattern
 
-Bob clicks Alice's avatar in the member rail, which opens or reuses a
-direct-message channel between the two of them. The handler derives the
-deterministic name `dm-{minId}-{maxId}` from the two user identifiers
-and upserts a `channels` row, so the same call always returns the same
-`channelId` and the timeline is preserved across opens.
+Bob opens a DM with Alice. The handler upserts a channel keyed by the
+two user ids, so reopening always returns the same `channelId` and
+preserves the timeline.
 
 ![Figure 13: Channel members panel showing membership and roles for the active channel.](../session-logs/screenshots/16_members_panel_open.png)
 
-Bob then dismisses the DM from his sidebar. The leave handler
-distinguishes direct from public channels. For a DM it sets
-`channelmember.hidden_at` instead of deleting the row, so the message
-history stays accessible to both participants and Alice's view is
-unaffected. A new message from Alice clears the timestamp and the DM
-reappears in Bob's list.
+Bob then hides the DM from his sidebar. Leaving a DM sets
+`channelmember.hidden_at` rather than deleting the row, so Alice's
+view is unchanged and a new message from her clears the flag.
 
 ```
 ### [18:36:19] bob opens a DM with alice in CS6083
@@ -1080,18 +1010,9 @@ reappears in Bob's list.
 
 Three adversarial inputs were submitted during the session: a SQL
 injection payload as a registration nickname, a SQL injection payload
-as a search query, and an XSS payload as a message body. None of them
-caused any database or rendering damage.
-
-The nickname is stored verbatim in `users.nickname` because asyncpg
-binds the value through the Postgres extended-query protocol; the
-characters never leave the value channel and never enter the SQL
-grammar. The search query passes through the same binding as the `%q%`
-substring and returns zero hits because no message content equals that
-literal string. The XSS payload is stored unchanged in
-`messages.content` and is rendered through React's `{value}` expression
-in `<MessageItem>`, which always produces a text node, so the
-`<script>` and `<img onerror>` markers appear as literal characters.
+as a search query, and an XSS payload as a message body. Each was
+stored verbatim and rendered as literal text. The defences are
+described in Sections 3.3 and 3.5.
 
 ```
 ### [18:36:18] security: anonymous attacker registers with SQL-injection-shaped nickname (stored as literal text)
@@ -1105,24 +1026,20 @@ in `<MessageItem>`, which always produces a text node, so the
 
 ### 7.10 Account management and read-only browsing
 
-Chess updates her password through `PATCH /api/auth/me`. The handler
-requires `currentPassword` to be present and to match the stored
-bcrypt hash before it accepts `newPassword`, so leaking the session
-cookie alone is not enough to take over an account.
+Chess updates her password. The handler requires the current password
+to match before it accepts the new one, so the session cookie alone
+is not enough to take over an account.
 
 ![Figure 14: Profile page with email, nickname, and password change controls.](../session-logs/screenshots/08_chess_profile.png)
 
-After the password change, Chess logs out and signs back in with the
-new password to confirm the update took, then restores the password so
-the seed remains valid for re-runs.
+Chess logs out, signs in with the new password, then restores the
+seed password.
 
-Chess also browses three administrative views: the cross-workspace
+Chess also browses three Part 1 admin views: the cross-workspace
 admin list, the messages-by-user view for Bob, and the stale channel
-invitations report for NYU CS6083. The stale-invites report uses a
-`LEFT JOIN` against `channelinvitation` filtered to invites older than
-five days that have not yet resulted in a `channelmember` row, and
-includes channels with zero stale invites in the result so the
-dashboard shows every public channel.
+invitations report. The stale-invites report uses a `LEFT JOIN` so
+channels with zero stale invites still appear, matching the Part 1
+c.7 specification.
 
 ![Figure 15: Cross-workspace admin list resolved by `GET /api/workspaces/admins`. The query returns one row per workspace-and-admin pair across every workspace the caller belongs to.](../session-logs/screenshots/07_chess_admins_across_workspaces.png)
 
@@ -1140,11 +1057,9 @@ dashboard shows every public channel.
 
 ### 7.11 Workspace lifecycle
 
-Finally Chess creates a throwaway workspace called `Sandbox` and
-disbands it. The DELETE handler trusts the foreign-key cascade on
-`workspaces` to remove the workspace's channels, members, messages,
-and invitations in a single statement, so no clean-up logic lives in
-the application.
+Chess creates a throwaway `Sandbox` workspace and disbands it. The
+DELETE relies on the foreign-key cascade on `workspaces`, so no
+application-side cleanup is needed.
 
 ```
 ### [18:36:22] chess creates a throwaway workspace 'Sandbox' to demo disband
@@ -1157,20 +1072,11 @@ the application.
 
 ### 7.12 Thread replies
 
-Chess posts a question in `#ship-it` and Dave replies inside the
-thread. The post handler verifies that the parent message exists,
-lives in the same channel, is not a system message, and is itself a
-top-level message rather than another reply. A request that violates
-any of these rules comes back as 400. The last check keeps threads
-flat: the schema would otherwise allow a reply to point at a reply,
-but a nested reply would never surface in the parent's thread panel
-because `list_thread_replies` filters by direct `parent_messageID`
-only. The Thread side panel on the right of the channel page renders
-the parent on top, the replies in chronological order, and a
-dedicated composer that auto-attaches the correct `parentMessageId`.
-Replies are filtered out of the main timeline by the `hideReplies`
-prop on `<MessageList>` so the parent's "reply count" badge is the
-only sign that a thread exists.
+Chess starts a thread in `#ship-it` and Dave replies. The post handler
+enforces four parent invariants: exists, same channel, not a system
+message, and not itself a reply. The last keeps threads flat. Replies
+are hidden from the main timeline; the parent's reply-count badge is
+the only sign of a thread.
 
 ![Figure 17: Thread side panel on `#ship-it`. Parent on top, replies below, composer pre-bound to the parent.](../session-logs/screenshots/21_thread_panel.png)
 
