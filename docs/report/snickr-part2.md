@@ -482,11 +482,17 @@ guarantee of Section 3.2: every value is bound through asyncpg's
 reserved for the two operations where atomicity across multiple tables
 matters most and the application would otherwise have to coordinate the
 sequence by hand: channel creation with the first-member insert, and
-invitation acceptance with the membership insert. Single-table reads
-and writes do not benefit from PL/pgSQL encapsulation and stay in the
-handlers as parameterised SQL. Other multi-step writes use
-`async with conn.transaction()` blocks instead of stored procedures
-when the surrounding logic is more naturally written in Python.
+invitation acceptance with the membership insert. Both are pure data
+operations that need no Python logic between the steps, so pushing the
+sequence into PL/pgSQL trades nothing and gains a single network
+round-trip. Other multi-step writes, for example posting a message and
+inserting its mention rows, also need to run as one unit, but the
+surrounding handler still has to map errors to HTTP status codes,
+emit log events, and serialise a Pydantic response. Those paths use
+`async with conn.transaction()` in Python, where the transaction
+coexists naturally with the framework code. Single-table reads and
+writes do not benefit from either form of encapsulation and stay in
+the handlers as parameterised SQL.
 
 The seven Part 1 query templates, kept as parameterised statements with
 `:name` placeholders in `database/queries/queries.sql`, are reissued by
@@ -730,14 +736,17 @@ safety net.
   insert is silently absorbed rather than raising.
 
 **Last-admin guard.** A workspace must have at least one administrator
-at all times. The backend enforces this with a read-then-write pattern
-that counts admins and refuses any change that would leave zero admins.
-Under the demo workload this is correct because the only way to
-interleave two attempts to demote the last admin is for two admins to
-demote each other simultaneously, and either ordering is acceptable. A
-stricter implementation would lock the relevant rows with
-`SELECT ... FOR UPDATE` inside the same transaction, and is listed as
-a future improvement.
+at all times. The backend enforces this in `remove_member` and
+`change_member_role`. Both handlers open a transaction, run a locked
+admin count, and then perform the delete or role update inside the
+same transaction. The lock is expressed as a CTE that selects the
+admin `workspacemember` rows `FOR UPDATE OF wm` and feeds the locked
+rows into a `COUNT(*)`. Postgres does not allow `FOR UPDATE` directly
+beside an aggregate, hence the CTE shape. Two admins demoting each
+other concurrently now serialise: the second transaction blocks on the
+first row lock, and when it resumes the count reads one and the
+operation is rejected with 409, preserving the invariant of at least
+one admin per workspace.
 
 ### 3.4 Session state and URL design
 
@@ -1174,7 +1183,7 @@ timeline by the `hideReplies` prop on `<MessageList>` so the parent's
 2026-05-07 19:47:39 INFO  snickr.event message.post uid=1 channelId=9 messageId=50 mentions=0 length=17
 ### [19:47:39] chess fetches the replies for the parent message
 2026-05-07 19:47:39 INFO  snickr.http  GET  /api/channels/9/messages/48/replies 200 uid=1 9ms
-### [19:47:39] dave attempts to reply with a parent from another channel - 400 rejected
+### [19:47:39] dave hand-crafts a POST to #ship-it with parentMessageId pointing at a #general message; handler compares parent.channelID against the URL and returns 400
 2026-05-07 19:47:39 INFO  snickr.http  POST /api/channels/9/messages 400 uid=6 2ms
 ```
 
