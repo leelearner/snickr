@@ -370,49 +370,34 @@ guarantee of Section 3.2: every value is bound through asyncpg's
 
 **Authentication.**
 
-- `register_user`. Parameterised SQL in `auth.py`. Given an email, a
-  username, an optional nickname, and a plaintext password, the handler
-  bcrypt-hashes the password, inserts a row into `users`, and writes the
-  user identifier into the session cookie. Returns the new user row, or
+- `register_user`. Parameterised SQL in `auth.py`. Bcrypt-hashes the
+  password, inserts the `users` row, writes the user id to the session.
   409 on duplicate email or username.
-- `authenticate_user`. Parameterised SQL in `auth.py`. Given a username
-  and a plaintext password, the handler selects the user row, calls
-  `bcrypt.checkpw` against the stored hash, and writes the user
-  identifier into the session cookie on success. Returns the user row,
-  or 401 with a generic message on either an unknown username or a bad
-  password, so an attacker cannot enumerate usernames.
+- `authenticate_user`. Parameterised SQL in `auth.py`. Calls
+  `bcrypt.checkpw` against the stored hash. 401 with a generic message
+  on either an unknown username or a bad password so usernames cannot
+  be enumerated.
 
 **Workspace management.**
 
-- `create_workspace`. Handler transaction in `workspaces.py`. Inserts the
-  workspace row, looks up the `admin` role, inserts the creator into
-  `workspacemember`, then calls `create_channel_for_member` to seed the
-  default `general` channel. The whole sequence runs inside a single
-  transaction. Returns the workspace summary.
+- `create_workspace`. Handler transaction in `workspaces.py`. Inserts
+  the workspace row, the creator's admin membership, then calls
+  `create_channel_for_member` to seed `#general`. All in one
+  transaction.
 - `create_channel_for_member`. **Stored procedure** with signature
-  `(p_workspace_id INTEGER, p_channel_name VARCHAR, p_type_name VARCHAR, p_user_id INTEGER) RETURNS INTEGER`.
-  Verifies the caller's workspace membership and returns `NULL` if it is
-  absent; otherwise resolves the channel-type identifier, raises on an
-  unknown type, inserts the `channels` row, and inserts the
-  `channelmember` row. Both inserts commit together inside the PL/pgSQL
-  function. Returns the new `channelID`. Used by `create_workspace` and
-  by `POST /api/workspaces/{id}/channels`.
-- `invite_member`. Parameterised SQL in `workspaces.py`. Asserts the
-  caller is an admin, resolves the invitee username, and inserts a row
-  into `workspaceinvitation` with `status_type = pending`. Returns the
-  new invitation row, or 409 if `(workspaceID, invitee)` already exists.
+  `(p_workspace_id, p_channel_name, p_type_name, p_user_id) RETURNS INTEGER`.
+  Verifies workspace membership, resolves the channel type, inserts the
+  `channels` row and the creator's `channelmember` row in one PL/pgSQL
+  block.
+- `invite_member`. Parameterised SQL in `workspaces.py`. Admin-only;
+  inserts a pending row into `workspaceinvitation`. 409 on duplicate.
 - `accept_workspace_invitation`. **Stored procedure** with signature
-  `(p_invitation_id INTEGER, p_user_id INTEGER) RETURNS INTEGER`. Reads
-  the invitation row joined with `status`; returns `NULL` if it is not
-  addressed to the caller; raises if it is already responded to.
-  Otherwise it resolves the `accepted` and `member` lookup identifiers,
-  updates the invitation status, and inserts the membership row with
-  `ON CONFLICT DO NOTHING` so a concurrent accept does not double-insert.
-  Returns the workspace identifier on success. Used by
-  `POST /api/me/workspace-invitations/{id}` with `accept: true`.
+  `(p_invitation_id, p_user_id) RETURNS INTEGER`. Reads the invitation
+  joined with `status`, validates it is addressed to the caller and
+  still pending, updates the status, and inserts membership with
+  `ON CONFLICT DO NOTHING` so concurrent accepts cannot double-insert.
 - `respond_to_invitation`, decline path. Handler transaction in
-  `workspaces.py`. Reads the invitation status under MVCC inside one
-  transaction and updates it to `declined`.
+  `workspaces.py`. Updates the invitation to `declined` under MVCC.
 - `remove_member`. Handler transaction in `workspaces.py`. Inside one
   transaction, runs the locked last-admin guard if the target is an
   admin, then deletes the user's rows from `channelmember` for every
@@ -426,24 +411,19 @@ guarantee of Section 3.2: every value is bound through asyncpg's
 **Channel management.**
 
 - `create_channel` is `create_channel_for_member`, described above.
-- `join_channel`. Parameterised SQL in `channels.py`. Asserts the
-  caller's workspace membership and that the channel's type is `public`,
-  then runs `INSERT INTO channelmember ON CONFLICT DO NOTHING`. Returns
-  200.
-- `invite_to_channel`. Parameterised SQL in `channels.py`. Asserts the
-  caller is a channel member, resolves the username, and inserts a
-  pending row into `channelinvitation`. Returns the new invitation, or
-  409 on a duplicate row.
+- `join_channel`. Parameterised SQL in `channels.py`. Workspace
+  membership and `channeltype = 'public'` required. Insert is
+  `ON CONFLICT DO NOTHING`.
+- `invite_to_channel`. Parameterised SQL in `channels.py`. Channel
+  member only; inserts a pending row into `channelinvitation`. 409 on
+  duplicate.
 - `respond_to_channel_invitation`. Handler transaction in `channels.py`.
-  On accept, runs an update on `channelinvitation` followed by an
-  `INSERT INTO channelmember ON CONFLICT DO NOTHING` inside one
-  transaction. On decline, only updates the invitation.
-- `open_direct_message`. Handler transaction in `channels.py`. Inside
-  one transaction, derives the deterministic name `dm-{minId}-{maxId}`
-  from the two user identifiers, upserts the `channels` row with type
-  `direct`, and inserts both participants into `channelmember`. The
-  deterministic name guarantees idempotency, so reopening returns the
-  same `channelID`.
+  On accept, the invitation status update and the `channelmember`
+  insert commit together. On decline, only the invitation is updated.
+- `open_direct_message`. Handler transaction in `channels.py`. Upserts
+  a channel keyed by the deterministic name `dm-{minId}-{maxId}` and
+  inserts both participants. Reopening always returns the same
+  `channelID`.
 
 **Messaging.**
 
@@ -506,38 +486,21 @@ that validate requests, eliminating drift between the implementation and
 the documented contract. Second, its dependency-injection mechanism
 makes authentication checks visible in every route signature.
 
-A request enters FastAPI and passes through two middleware layers.
-`CORSMiddleware` permits only the origins listed in `FRONTEND_ORIGIN`.
-The React dev server proxies `/api/*` to the backend, so requests are
-same-origin from the browser's point of view, and the CORS list matters
-only when a developer calls the backend directly from another host.
-`SessionMiddleware` reads and writes the signed `snickr_session` cookie.
-After middleware, FastAPI dispatches to a router under `app/api/v1/`.
-There is one router per resource group: `auth.py`, `workspaces.py`,
-`channels.py`, `messages.py`, and `mentions.py`, plus a small `deps.py`
-that holds the shared `current_user_id` dependency. The mention parser
-and the `/api/me/mentions` endpoint live in `mentions.py` and are
-imported by the message router so a single transaction covers both
-message creation and mention insertion.
+Two middlewares run before the router: `CORSMiddleware` for the
+`FRONTEND_ORIGIN` allow-list, and `SessionMiddleware` for the signed
+`snickr_session` cookie. Routers live under `app/api/v1/`, one per
+resource group: `auth.py`, `workspaces.py`, `channels.py`, `messages.py`,
+and `mentions.py`, plus a small `deps.py` for shared dependencies.
 
 Each handler depends on `get_conn`, which leases an `asyncpg.Connection`
-from a single pool created during the FastAPI lifespan. asyncpg leases
-one connection per request, so every query inside a handler runs on the
-same connection, and inside the same transactional context if the
-handler opens one. The pool also disables asyncpg's per-connection
-prepared-statement cache, allowing the same SQL to be reissued cleanly
-through a connection pooler such as Supabase's session pooler without
-prepared-statement name clashes.
+from a pool created during the FastAPI lifespan. One connection per
+request means every query inside a handler runs on the same connection
+and the same transaction context.
 
-**Endpoint inventory.** The full API is exposed under `/api` and is
-organised into five resource groups: authentication, workspaces and
-their invitations, channels and their invitations, messages and
-threads, and the inbox plus search. FastAPI generates an interactive
-catalog of every route from the same Pydantic models that validate
-requests; the catalog is served at `/docs` while the backend is
-running and is the canonical reference for path, method, request
-body, and response schema. The conventions that govern those routes
-are described next.
+**Endpoint inventory.** The API is organised into five resource groups
+under `/api`: authentication, workspaces, channels, messages, and the
+inbox plus search. FastAPI's `/docs` is the canonical reference for
+path, method, request body, and response schema.
 
 **Path conventions.** Resource paths are pluralised, identifiers are
 numeric, and nested paths mirror containment: a channel lives under a
@@ -639,46 +602,32 @@ backend addresses this in two ways: multi-statement writes run inside
 Postgres transactions so each commits as a unit or rolls back as a unit,
 and everything else is left to Postgres's default MVCC isolation.
 
-**Transactional operations.** The list below catalogues every place
-where the backend opens an explicit transaction. Each entry names the
-operation, the rows it touches, and the invariant the transaction
-preserves.
+**Transactional operations.** Every place the backend opens an explicit
+transaction, with the invariant it preserves.
 
-- Workspace creation. Inserts the workspace row, the creator's
-  admin-role membership row, and the default `general` channel through
-  `create_channel_for_member`. The transaction guarantees that a
-  workspace never exists without an admin or without its `general`
-  channel.
-- Direct-message channel creation. Upserts the channel under the
-  deterministic name and inserts both participants as members. The
-  transaction guarantees that both participants see the channel together
+- Workspace creation. Workspace row + admin membership + default
+  `general` channel via `create_channel_for_member`. Invariant: no
+  workspace exists without an admin or without `general`.
+- Direct-message channel creation. Channel upsert + both
+  `channelmember` rows. Invariant: either both participants see the DM
   or neither does.
-- Member removal. Deletes the user's memberships in every channel of
-  the workspace, then deletes the workspace-membership row. The
-  transaction guarantees that the user does not retain channel rows that
-  outlive their workspace membership.
-- Channel-invitation response. Updates `channelinvitation.status_type`
-  and, on accept, inserts the channel-membership row. The transaction
-  guarantees that an invitation is never marked accepted without its
-  membership row.
-- Workspace-invitation decline. Reads the invitation status and updates
-  it inside one transaction, so concurrent accept and decline calls
-  cannot both succeed.
+- Member removal. Channel memberships first, then the workspace
+  membership. Invariant: no channel rows outlive the workspace
+  membership.
+- Channel-invitation response. Status update plus, on accept, the
+  membership insert. Invariant: an invitation is never marked accepted
+  without its membership row.
+- Workspace-invitation decline. Status read + update under MVCC.
+  Invariant: concurrent accept and decline cannot both succeed.
 - Workspace-invitation acceptance. Encapsulated inside the
-  `accept_workspace_invitation` stored procedure described in Section
-  2.4. The procedure runs as one PL/pgSQL block, so Postgres serialises
-  the read of the invitation status, the update to `accepted`, and the
-  insert into `workspacemember`. Two users racing to accept the same
-  invitation cannot both succeed.
-- Message creation. Inserts the message row, walks the new content for
-  `@username` patterns, resolves them against `channelmember`, and
-  bulk-inserts the resulting `mentions` rows. The transaction guarantees
-  that a message and its mention rows commit together.
-- Message editing. Updates `messages.content` and `messages.edited_time`,
-  deletes the existing `mentions` rows for the message, and re-inserts
-  mentions parsed from the new content. The transaction guarantees that
-  edited content and the corresponding mention set are never out of
-  sync.
+  `accept_workspace_invitation` stored procedure (Section 2.4).
+  Invariant: two users racing to accept the same invitation cannot both
+  succeed.
+- Message creation. Inserts the message and its mention rows together.
+  Invariant: a message and its mentions commit as a unit.
+- Message editing. Content + `edited_time` update, plus delete-and-
+  reinsert of the mention rows. Invariant: edited content and the
+  mention set are never out of sync.
 
 **Isolation level.** The default Postgres isolation level, READ
 COMMITTED, is left in place. The backend's writes touch a small number
@@ -758,14 +707,11 @@ unparameterised by user identifier; the page reads its content from
 `/api/auth/me`, and the backend resolves "me" from the session.
 
 **Deep linking.** The frontend reconstructs page state from the URL on
-every load. A user who pastes the URL of a channel into a fresh browser
-session lands on the login page, logs in, and is redirected to the same
-channel. The protected route stashes the original `Location` object in
-React Router's `state` when it redirects to `/login`, and the login
-page reads `location.state.from.pathname` after a successful sign-in
-and navigates back. The URL itself stays clean. A user who pastes a
-search URL is taken to the search page with the query prefilled and
-the results computed.
+every load. A pasted channel or search URL survives the login round
+trip: the protected route stashes the original `Location` in React
+Router's `state` and the login page reads `location.state.from.pathname`
+after a successful sign-in to navigate back. The URL itself stays
+clean.
 
 **Session invalidation.** `POST /api/auth/logout` clears the
 server-side session dictionary so the next request from that browser
@@ -775,18 +721,13 @@ explicit logout are the two paths to session invalidation.
 
 ### 3.5 Cross-site scripting (XSS)
 
-The course specification asks the system to guard against cross-site
-scripting in addition to SQL injection. Defence is split between this
-backend and the React frontend. The backend's part is described here;
-the rendering-layer behaviour is covered in this section as well, since
-the rendering boundary is the load-bearing element of the defence.
+XSS defence is split between the backend and the React frontend. The
+rendering boundary is the load-bearing element of the defence.
 
-The backend stores user-submitted text exactly as received. It does not
-call `htmlspecialchars`, it does not strip HTML tags, and it does not
-normalise whitespace at write time. A message whose content is the
-literal string `<script>alert(1)</script>` is stored as those 26
-characters in `messages.content`. A username containing an ampersand is
-stored with the ampersand as-is.
+The backend stores user-submitted text exactly as received. It does
+not call `htmlspecialchars`, strip HTML tags, or normalise whitespace
+at write time. A message whose content is `<script>alert(1)</script>`
+is stored as those 26 literal characters.
 
 Escaping at write time would couple the database representation to a
 single output format. A future plain-text export, a mobile client, or
@@ -828,10 +769,7 @@ in the excerpts below come from the driver, not the backend.
 
 ### 7.1 Authentication and workspace navigation
 
-Chess opens the login page, signs in with her seeded credentials, and
-lands on the workspace list. From the list she enters NYU CS6083, which
-renders the channel sidebar, the member rail, and the `#general`
-timeline including the seeded conversation history.
+Chess signs in and enters NYU CS6083.
 
 ![Figure 2: Login form. The session cookie set by the success response is `httpOnly` and `sameSite=lax`, so a hypothetical XSS payload cannot exfiltrate it through `document.cookie`.](../session-logs/screenshots/01_login_page.png)
 
