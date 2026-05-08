@@ -107,8 +107,10 @@ already been applied.
 
 ![Figure 1: Entity–Relationship diagram of the Snickr database.](../ER-Diagram.drawio.svg)
 
-The diagram covers ten business entities. The cardinalities are shown
-on the connectors, and the foreign-key columns that realise each
+The diagram covers nine business tables: `users`, `workspaces`,
+`workspacemember`, `workspaceinvitation`, `channels`, `channelmember`,
+`channelinvitation`, `messages`, and `mentions`. The cardinalities are
+shown on the connectors, and the foreign-key columns that realise each
 relationship are listed in the constraint column of the per-table
 schema in Section 2.3.
 
@@ -415,9 +417,10 @@ guarantee of Section 3.2: every value is bound through asyncpg's
   transaction, deletes the user's rows from `channelmember` for every
   channel in the workspace, then deletes the `workspacemember` row.
   Returns 204.
-- `change_role`. Parameterised SQL in `workspaces.py`. Promotes or
-  demotes a member. The last-admin guard counts admins and refuses any
-  change that would leave the workspace with zero admins.
+- `change_member_role`. Handler transaction in `workspaces.py`. Promotes
+  or demotes a member. The last-admin guard counts admins under a row
+  lock and refuses any change that would leave the workspace with zero
+  admins; see Section 3.3 for the locking shape.
 
 **Channel management.**
 
@@ -801,7 +804,8 @@ the results computed.
 **Session invalidation.** `POST /api/auth/logout` clears the
 server-side session dictionary so the next request from that browser
 fails authentication. There is no refresh-token mechanism: an expired
-seven-day cookie sends the user back through login.
+seven-day cookie sends the user back through login. Cookie expiry and
+explicit logout are the two paths to session invalidation.
 
 ### 3.5 Cross-site scripting
 
@@ -1188,7 +1192,7 @@ only sign that a thread exists.
 2026-05-07 19:47:39 INFO  snickr.event message.post uid=1 channelId=9 messageId=50 mentions=0 length=17
 ### [19:47:39] chess fetches the replies for the parent message
 2026-05-07 19:47:39 INFO  snickr.http  GET  /api/channels/9/messages/48/replies 200 uid=1 9ms
-### [19:47:39] dave hand-crafts a POST to #ship-it with parentMessageId pointing at a #general message; handler compares parent.channelID against the URL and returns 400
+### [19:47:39] dave attempts a cross-channel reply - 400 rejected
 2026-05-07 19:47:39 INFO  snickr.http  POST /api/channels/9/messages 400 uid=6 2ms
 ```
 

@@ -101,7 +101,7 @@
 ### [19:47:39] chess fetches the replies for the parent message
 2026-05-07 19:47:39 INFO  snickr.http GET /api/channels/9/messages/48/replies 200 uid=1 9ms
 
-### [19:47:39] dave attempts to reply with a parent from another channel - 400 rejected
+### [19:47:39] dave attempts a cross-channel reply - 400 rejected
 2026-05-07 19:47:39 INFO  snickr.http GET /api/workspaces/1/channels 200 uid=1 3ms
 2026-05-07 19:47:39 INFO  snickr.http POST /api/channels/9/messages 400 uid=6 2ms
 
