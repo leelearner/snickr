@@ -414,9 +414,10 @@ guarantee of Section 3.2: every value is bound through asyncpg's
   `workspaces.py`. Reads the invitation status under MVCC inside one
   transaction and updates it to `declined`.
 - `remove_member`. Handler transaction in `workspaces.py`. Inside one
-  transaction, deletes the user's rows from `channelmember` for every
+  transaction, runs the locked last-admin guard if the target is an
+  admin, then deletes the user's rows from `channelmember` for every
   channel in the workspace, then deletes the `workspacemember` row.
-  Returns 204.
+  Returns 204. See Section 3.3 for the locking shape.
 - `change_member_role`. Handler transaction in `workspaces.py`. Promotes
   or demotes a member. The last-admin guard counts admins under a row
   lock and refuses any change that would leave the workspace with zero
