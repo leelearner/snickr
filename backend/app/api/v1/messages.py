@@ -117,7 +117,7 @@ async def post_channel_message(
 
     if body.parentMessageId is not None:
         parent = await conn.fetchrow(
-            "SELECT channelID, system_kind FROM messages WHERE messageID = $1",
+            "SELECT channelID, system_kind, parent_messageID FROM messages WHERE messageID = $1",
             body.parentMessageId,
         )
         if parent is None:
@@ -131,6 +131,14 @@ async def post_channel_message(
             raise HTTPException(
                 status.HTTP_400_BAD_REQUEST,
                 detail="cannot reply to a system message",
+            )
+        # Threads stay flat: a reply must point at a top-level message, not at
+        # another reply. Replies-to-replies would otherwise be admitted by the
+        # schema but would never surface in the parent's thread panel.
+        if parent["parent_messageid"] is not None:
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                detail="cannot reply to a reply; reply to the top-level message",
             )
 
     async with conn.transaction():

@@ -112,7 +112,7 @@ conda activate snickr
 pytest
 ```
 
-50 tests, all passing.
+51 tests, all passing.
 
 ## Tech stack
 

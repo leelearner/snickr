@@ -163,7 +163,7 @@ curl -s -b $CH -X POST $BASE/api/channels/$SHIP/messages \
 mark "chess fetches the replies for the parent message"
 curl -s -b $CH $BASE/api/channels/$SHIP/messages/$PARENT/replies >/dev/null
 
-mark "dave attempts to reply with a parent from another channel - 400 rejected"
+mark "dave attempts a cross-channel reply - 400 rejected"
 GENERAL_ID=$(python3 -c "import json,sys;chs=json.load(sys.stdin);print(next(c for c in chs if c['channelName']=='general')['channelId'])" < <(curl -s -b $CH $BASE/api/workspaces/$WS_CS/channels))
 curl -s -b $DD -X POST $BASE/api/channels/$SHIP/messages \
   -H 'Content-Type: application/json' \

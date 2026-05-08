@@ -254,6 +254,23 @@ async def test_thread_parent_must_be_in_same_channel(make_client, uid):
     assert r.status_code == 400
 
 
+async def test_thread_rejects_reply_to_reply(make_client, uid):
+    alice, bob, _, _, _, ch_id = await _two_member_channel(make_client, uid)
+    parent = (await alice.post(f"/api/channels/{ch_id}/messages", json={"content": "top"})).json()
+    reply = (
+        await bob.post(
+            f"/api/channels/{ch_id}/messages",
+            json={"content": "first reply", "parentMessageId": parent["messageId"]},
+        )
+    ).json()
+
+    r = await alice.post(
+        f"/api/channels/{ch_id}/messages",
+        json={"content": "nested", "parentMessageId": reply["messageId"]},
+    )
+    assert r.status_code == 400
+
+
 async def test_thread_replies_cascade_when_parent_deleted(make_client, uid):
     alice, bob, _, _, _, ch_id = await _two_member_channel(make_client, uid)
     parent = (
