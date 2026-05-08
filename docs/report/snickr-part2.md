@@ -808,7 +808,7 @@ fails authentication. There is no refresh-token mechanism: an expired
 seven-day cookie sends the user back through login. Cookie expiry and
 explicit logout are the two paths to session invalidation.
 
-### 3.5 Cross-site scripting
+### 3.5 Cross-site scripting (XSS)
 
 The course specification asks the system to guard against cross-site
 scripting in addition to SQL injection. Defence is split between this
@@ -862,21 +862,11 @@ Sections 2 and 3. The driver script is committed at
 log file between the start and end of the run, is committed at
 `docs/session-logs/session-2026-05-08.txt`. The matching screenshots
 were captured by Playwright scripts in the same directory against the
-running React frontend.
+running React frontend. The driver inserts `### [HH:MM:SS] description`
+markers between API calls so the captured transcript reads as narrative
+rather than as a flat event stream.
 
-### 7.1 What the backend logs
-
-`app/core/logging.py` writes every log line to both stdout and
-`backend/snickr.log`. Two streams are produced: an ASGI middleware in
-`app/main.py` emits one `snickr.http` line per request with method,
-path, status, user identifier, and latency; handlers call a
-`log_event(category, **fields)` helper at each interesting state change
-and emit one `snickr.event` line with `key=value` fields. The driver
-script inserts `### [HH:MM:SS] description` markers between API calls
-so the captured transcript reads as narrative rather than as a flat
-event stream.
-
-### 7.2 Authentication and workspace navigation
+### 7.1 Authentication and workspace navigation
 
 Chess opens the login page, signs in with her seeded credentials, and
 lands on the workspace list. From the list she enters NYU CS6083, which
@@ -901,7 +891,7 @@ timeline including the seeded conversation history.
 2026-05-07 18:36:09 INFO  snickr.http  GET  /api/channels/1/messages 200 uid=1 3ms
 ```
 
-### 7.3 Mentions and the Inbox
+### 7.2 Mentions and the Inbox
 
 Chess posts an announcement that mentions Bob. The post handler parses
 `@bob` from the body, joins it against `channelmember`, and inserts a
@@ -922,11 +912,11 @@ the `mention` group.
 2026-05-07 18:36:10 INFO  snickr.http  GET  /api/me/mentions 200 uid=4 10ms
 ```
 
-The third Inbox classification, `join`, is exercised in Section 7.6
+The third Inbox classification, `join`, is exercised in Section 7.5
 when Dave self-joins Chess's new public channel. Chess's Inbox after
 that step contains all three event kinds.
 
-### 7.4 Editing, deleting, and searching messages
+### 7.3 Editing, deleting, and searching messages
 
 Chess hovers her own announcement, clicks the inline pencil, and edits
 the content. The PATCH handler updates `messages.content`, sets
@@ -956,7 +946,7 @@ channels Chess can read.
 2026-05-07 18:36:12 INFO  snickr.event search uid=1 q=demo hits=4
 ```
 
-### 7.5 Workspace invitation acceptance through a stored procedure
+### 7.4 Workspace invitation acceptance through a stored procedure
 
 Dave logs in, lists his pending invitations, and accepts the one to
 NYU CS6083. The handler delegates to `accept_workspace_invitation`,
@@ -979,7 +969,7 @@ accepts cannot both succeed.
 2026-05-07 18:36:14 INFO  snickr.http  POST /api/me/workspace-invitations/1 200 uid=6 7ms
 ```
 
-### 7.6 Channel creation through a stored procedure and the `join` event
+### 7.5 Channel creation through a stored procedure and the `join` event
 
 Chess clicks the `+` next to CHANNELS, names the new channel `ship-it`,
 selects Public, and confirms. The handler invokes
@@ -1011,7 +1001,7 @@ nickname starts with the substring after the most recent `@`.
 
 ![Figure 10: Mention autocomplete in the composer. Typing `@bo` surfaces Bob Garcia from the channel member list. Selecting a candidate inserts the canonical `@username` into the body, which the post handler then resolves through the same channel-membership join.](../session-logs/screenshots/19_mention_autocomplete.png)
 
-### 7.7 Channel invitation flow on a private channel
+### 7.6 Channel invitation flow on a private channel
 
 Chess creates a private channel `release-prep`. Alice cannot see it
 through the channel list, and a direct `GET /api/channels/{id}` returns
@@ -1038,7 +1028,7 @@ the membership row commit together.
 2026-05-07 18:36:16 INFO  snickr.event channel.invitation_response uid=3 invitationId=2 channelId=10 status=accepted
 ```
 
-### 7.8 Last-admin guard
+### 7.7 Last-admin guard
 
 Alice is the only administrator of the Roommates workspace. When she
 clicks Demote on her own row, the role-change handler counts admins,
@@ -1061,7 +1051,7 @@ demotion is allowed.
 2026-05-07 18:36:18 INFO  snickr.event workspace.role_change uid=3 workspaceId=2 target=3 role=member
 ```
 
-### 7.9 Direct messages and the soft-delete pattern
+### 7.8 Direct messages and the soft-delete pattern
 
 Bob clicks Alice's avatar in the member rail, which opens or reuses a
 direct-message channel between the two of them. The handler derives the
@@ -1086,7 +1076,7 @@ reappears in Bob's list.
 2026-05-07 18:36:20 INFO  snickr.http  POST /api/channels/8/leave 204 uid=4 2ms
 ```
 
-### 7.10 Security guards
+### 7.9 Security guards
 
 Three adversarial inputs were submitted during the session: a SQL
 injection payload as a registration nickname, a SQL injection payload
@@ -1113,7 +1103,7 @@ in `<MessageItem>`, which always produces a text node, so the
 2026-05-07 18:36:19 INFO  snickr.event message.post uid=5 channelId=1 messageId=43 mentions=0 length=53
 ```
 
-### 7.11 Account management and read-only browsing
+### 7.10 Account management and read-only browsing
 
 Chess updates her password through `PATCH /api/auth/me`. The handler
 requires `currentPassword` to be present and to match the stored
@@ -1148,7 +1138,7 @@ dashboard shows every public channel.
 2026-05-07 18:36:22 INFO  snickr.http  PATCH /api/auth/me 200 uid=1 448ms
 ```
 
-### 7.12 Workspace lifecycle
+### 7.11 Workspace lifecycle
 
 Finally Chess creates a throwaway workspace called `Sandbox` and
 disbands it. The DELETE handler trusts the foreign-key cascade on
@@ -1165,7 +1155,7 @@ the application.
 2026-05-07 18:36:22 INFO  snickr.http  DELETE /api/workspaces/3 204 uid=1 4ms
 ```
 
-### 7.13 Thread replies
+### 7.12 Thread replies
 
 Chess posts a question in `#ship-it` and Dave replies inside the
 thread. The post handler verifies that the parent message exists,
@@ -1197,5 +1187,5 @@ only sign that a thread exists.
 2026-05-07 19:47:39 INFO  snickr.http  POST /api/channels/9/messages 400 uid=6 2ms
 ```
 
-The unabridged transcript of all thirteen scenes is committed at
+The unabridged transcript of all twelve scenes is committed at
 `docs/session-logs/session-2026-05-08.txt`.
