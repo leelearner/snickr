@@ -114,21 +114,15 @@ shown on the connectors, and the foreign-key columns that realise each
 relationship are listed in the constraint column of the per-table
 schema in Section 2.3.
 
-Three lookup tables, `roles`, `status`, and `channeltype`, sit alongside
-the business tables and replace string enums. A workspace member holds a
-foreign key into `roles` rather than a `VARCHAR` literal, an invitation
-row holds a foreign key into `status`, and a channel holds a foreign key
-into `channeltype`. New roles, statuses, or channel types can therefore
-be added with a single insert into the lookup table rather than a
-schema-altering data migration.
+Three lookup tables (`roles`, `status`, `channeltype`) sit alongside
+the business tables and replace string enums. The rationale is in
+2.3 under Normalisation.
 
-Participation constraints are weak by design, so the schema can describe
-in-progress states. A user may belong to zero workspaces, a workspace may
-contain zero channels for the brief moment between creation steps before
-the default `general` channel is added, and a channel may be empty for the
-moment between creation and the first message. The application
-transactions described in Section 3.3 ensure that these gaps never become
-visible to other users.
+Participation constraints are weak by design, so the schema can
+describe in-progress states: a workspace can briefly contain zero
+channels between creation steps, a channel can be empty between
+creation and the first message. The transactions in Section 3.3
+ensure these gaps never become visible to other users.
 
 Notable design choices:
 
@@ -321,20 +315,14 @@ their parent.
 Unique constraint on `(messageID, mentioned_user)` prevents the same
 mention from being double-counted.
 
-**Normalisation.** Every table is in third normal form. Each non-key
-attribute depends on the whole primary key and on no other non-key
-attribute. The user record carries no derived values. Membership tables
-hold only the join key, the role or join time, and no facts about the
-user or the channel. The lookup tables hold only the surrogate identifier
-and the canonical name. Messages hold the channel pointer, the poster
-pointer, the content, and the timestamps; the poster's name is not
-denormalised onto the message and is joined at read time.
+**Normalisation.** Every table is in 3NF. Membership tables carry only
+the join key plus role or join time. The poster's name is not
+denormalised onto `messages`; it is joined at read time.
 
-The lookup tables are the closest the design comes to denormalisation. A
-`CHECK` constraint with an enumerated list would suffice and would avoid a
-join. The schema uses tables instead so new values can be added with a
-single `INSERT` rather than a schema migration, and so foreign-key
-referential integrity catches typos that a `CHECK` list cannot.
+The lookup tables (`roles`, `status`, `channeltype`) are the closest
+the design comes to denormalisation. We use tables rather than
+`CHECK`-list enums so new values can be added with a single `INSERT`,
+and so foreign-key referential integrity catches typos.
 
 **Indexes.** The schema declares five secondary indexes on top of the
 implicit primary-key and unique-constraint indexes. Three are in
@@ -348,11 +336,6 @@ implicit primary-key and unique-constraint indexes. Three are in
 | `idx_channel_member_user` | `channelmember (userID)` | Same reasoning as the workspace index, applied to channels. |
 | `idx_mentions_user` | `mentions (mentioned_user, created_time DESC)` | The Inbox query filters by `mentioned_user` and orders by recency, so a covering composite index turns the read into a single backward index scan. |
 | `idx_messages_parent` | `messages (parent_messageID) WHERE parent_messageID IS NOT NULL` | The thread-replies query filters by `parent_messageID`. A partial index excludes the top-level rows, which dominate the table, so the index is small and the lookup is a single seek. |
-
-Foreign-key columns that participate in joins benefit from indexing
-because of cascade-delete behaviour on the parent. Postgres scans the
-child by the foreign key when the parent is deleted, and an index makes
-that scan an index seek rather than a sequential scan.
 
 ### 2.4 Stored procedures and queries
 
@@ -502,19 +485,15 @@ under `/api`: authentication, workspaces, channels, messages, and the
 inbox plus search. FastAPI's `/docs` is the canonical reference for
 path, method, request body, and response schema.
 
-**Path conventions.** Resource paths are pluralised, identifiers are
-numeric, and nested paths mirror containment: a channel lives under a
-workspace, its messages live under the channel. `PUT` is not used
-because no resource carries a fully replaceable representation; partial
-edits go through `PATCH` and bespoke actions such as accepting an
-invitation or joining a channel are `POST`.
+**Path conventions.** Nested paths mirror containment: a channel lives
+under a workspace, its messages live under the channel. Partial edits
+use `PATCH`; bespoke actions such as accepting an invitation use
+`POST`.
 
-**Request and response format.** Every request and response body is
-JSON encoded as UTF-8. Field names are camelCase on the wire, while
-Postgres identifiers are lowercase. The mapping is performed in SQL with
-column aliases such as `SELECT workspaceID AS "workspaceId"`. Aliasing
-in SQL rather than in a global serialiser keeps the SQL readable and
-makes the mapping inspectable in the source.
+**Request and response format.** Field names are camelCase on the wire
+while Postgres identifiers are lowercase. The mapping is performed in
+SQL with column aliases like `SELECT workspaceID AS "workspaceId"`,
+which keeps the mapping inspectable in the source.
 
 **Error handling.** Error responses are FastAPI's default JSON shape
 with a single `detail` field. Two project-specific decisions are worth
@@ -551,48 +530,27 @@ event.
 ### 3.2 Security: guarding against SQL injection
 
 Every query and every stored-procedure invocation passes user input
-through asyncpg's parameter binding. The Postgres extended-query
-protocol prepares each statement once and binds its arguments through
-the binary protocol, so input that resembles SQL keywords cannot escape
-its placeholder. There is no codepath in the application where user
-text is concatenated into a SQL string, no f-string interpolation of
-user input, and no manual escaping. The course specification calls out
-stored procedures and prepared statements as acceptable mitigations,
-and the design relies on both.
+through asyncpg's parameter binding. No codepath concatenates user
+text into a SQL string, uses f-string interpolation, or escapes
+manually; every write is `await conn.execute("INSERT ... ($1)", value)`
+shape so the user text is always a value and never grammar.
 
 **Stored procedures as an additional layer.** The two procedures from
 Section 2.4 take typed arguments and are invoked through
-`SELECT create_channel_for_member($1, $2, $3, $4)` style calls. The
-application layer therefore never constructs raw SQL even for the most
-sensitive multi-step writes. The procedure body is owned by the database
-schema rather than by the application, so a future application bug
-cannot cause a malformed write inside the procedure.
+`SELECT create_channel_for_member($1, $2, $3, $4)`. The application
+never constructs raw SQL even for the most sensitive multi-step writes,
+and the procedure body lives in the schema, not the app, so a future
+application bug cannot cause a malformed write inside the procedure.
 
-**Input validation layer.** Pydantic v2 models in `app/schemas/` describe
-both request payloads and response shapes. Field length limits in these
-models mirror the schema constraints, so a 31-character username is
-rejected at validation time before it reaches Postgres. Email addresses
-are validated against the RFC 5321 mailbox grammar by Pydantic's
-`EmailStr`. Type coercion is strict, so passing the string `"1"` where
-an integer is required is rejected rather than silently parsed.
-
-**Vulnerable versus safe pattern.** A vulnerable Python pattern would
-build SQL with f-strings such as
-`f"INSERT INTO messages (content) VALUES ('{user_text}')"`, where a
-message containing `'); DROP TABLE messages; --` would parse as two SQL
-statements and the second one would drop the table. The Snickr backend
-never builds SQL this way. Every write looks like
-`await conn.execute("INSERT INTO messages (content) VALUES ($1)", user_text)`,
-where asyncpg sends the SQL and the bound argument as separate fields in
-the Postgres extended-query protocol. The user text is always a value
-and never grammar.
+**Input validation layer.** Pydantic v2 models in `app/schemas/` mirror
+the schema's length limits and types, so a 31-character username or a
+non-integer id is rejected before reaching Postgres. Email addresses
+go through `EmailStr` (RFC 5321 grammar).
 
 **Mention parsing follows the same rule.** A regex extracts candidate
-handles from the message text in Python, then the list is passed to
-Postgres as a bound `text[]` argument with
-`username = ANY($1::text[])`. The lookup never builds a `WHERE` clause
-out of user-supplied substrings, so the same structural guarantee
-applies.
+handles from the message in Python, then the list is passed as a bound
+`text[]` argument with `username = ANY($1::text[])`. The lookup never
+builds a `WHERE` clause out of user-supplied substrings.
 
 ### 3.3 Concurrency control and transactions
 
@@ -685,26 +643,16 @@ prevents offline tampering. The cookie is signed rather than encrypted,
 so a user could in principle inspect the contents, which is acceptable
 for a numeric user identifier.
 
-**Cookie attributes.** The cookie is marked `httpOnly`, so client-side
-JavaScript cannot read it; a hypothetical XSS payload therefore cannot
-exfiltrate the session through `document.cookie`. It is marked
-`sameSite=lax`, so the browser does not attach it to cross-site `POST`
-requests, which mitigates CSRF on state-changing endpoints. Its lifetime
-is seven days, after which the browser drops the cookie and the next
-protected request returns 401.
+**Cookie attributes.** `httpOnly` blocks `document.cookie` reads,
+`sameSite=lax` blocks cross-site state-changing requests, lifetime is
+seven days.
 
-**URL design philosophy.** URLs are RESTful, bookmarkable, and
-human-readable. The frontend mirrors the API path structure, so a URL
-encodes a position in the data rather than a position in the UI. A
-workspace lives at `/api/workspaces/{id}` and at `/app/workspaces/{id}`.
-A channel lives at `/api/channels/{id}` and at
-`/app/workspaces/{id}/channels/{id}`. A search result page lives at
-`/app/search?q={query}`. None of these URLs encodes the user's identity,
-so the same URL points at the same conceptual resource for every user,
-and the backend decides at request time whether the caller is allowed
-to see it. The user's profile page lives at `/app/profile`, deliberately
-unparameterised by user identifier; the page reads its content from
-`/api/auth/me`, and the backend resolves "me" from the session.
+**URL design.** The frontend mirrors the API path structure, so a URL
+encodes a position in the data rather than a position in the UI. URLs
+do not carry user identity, so the same URL means the same thing for
+every caller and the backend decides access at request time. The
+profile page is `/app/profile`, deliberately unparameterised; the
+backend resolves "me" from the session.
 
 **Deep linking.** The frontend reconstructs page state from the URL on
 every load. A pasted channel or search URL survives the login round
@@ -736,26 +684,16 @@ its own output context. Storing the original input keeps the data
 clean and pushes escaping to the rendering boundary, where the output
 context is actually known.
 
-The rendering boundary is the React frontend. React's JSX expression
-syntax `{value}` always produces a text node, never raw HTML, so an
-injected `<script>` tag in a message body becomes the literal four
-characters `<`, `s`, `c`, `r` rather than an executable script element.
-The codebase does not use `dangerouslySetInnerHTML`, the only React API
-that opts out of automatic escaping. Every place a message can appear
-in the UI flows through the same `<MessageItem>` component, so a single
-audit point covers every rendering path. A payload such as
-`<img src=x onerror=alert(1)>` typed into the composer is therefore
-rendered as the literal characters of an HTML tag rather than as an
-`img` element, so the `onerror` handler is never attached and never
-fires.
+The rendering boundary is the React frontend. JSX `{value}` produces a
+text node, and the codebase never uses `dangerouslySetInnerHTML`. Every
+message body flows through one `<MessageItem>` component, so a single
+audit point covers every rendering path. A payload like
+`<img src=x onerror=alert(1)>` therefore renders as literal characters,
+not as an `img` element, and the `onerror` handler never fires.
 
-Two backend choices reinforce the rendering-layer defence. The session
-cookie is marked `httpOnly`, so a hypothetical script that did execute
-in the page could not exfiltrate the cookie through `document.cookie`.
-The cookie is also marked `sameSite=lax`, which prevents the browser
-from attaching it to cross-site `POST` requests, blunting CSRF as a
-secondary effect. Neither attribute is XSS protection on its own, but
-each limits the damage of a hypothetical render-layer mistake.
+The session cookie's `httpOnly` and `sameSite=lax` attributes (Section
+3.4) limit the damage of a hypothetical render-layer mistake by
+keeping it out of `document.cookie`.
 
 ---
 
