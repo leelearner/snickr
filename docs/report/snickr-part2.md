@@ -1163,14 +1163,19 @@ the application.
 ### 7.13 Thread replies
 
 Chess posts a question in `#ship-it` and Dave replies inside the
-thread. The post handler verifies that the parent message exists and
-lives in the same channel; a request that points at a parent in a
-different channel comes back as 400. The Thread side panel on the right
-of the channel page renders the parent on top, the replies in
-chronological order, and a dedicated composer that auto-attaches the
-correct `parentMessageId`. Replies are filtered out of the main
-timeline by the `hideReplies` prop on `<MessageList>` so the parent's
-"reply count" badge is the only sign that a thread exists.
+thread. The post handler verifies that the parent message exists,
+lives in the same channel, is not a system message, and is itself a
+top-level message rather than another reply. A request that violates
+any of these rules comes back as 400. The last check keeps threads
+flat: the schema would otherwise allow a reply to point at a reply,
+but a nested reply would never surface in the parent's thread panel
+because `list_thread_replies` filters by direct `parent_messageID`
+only. The Thread side panel on the right of the channel page renders
+the parent on top, the replies in chronological order, and a
+dedicated composer that auto-attaches the correct `parentMessageId`.
+Replies are filtered out of the main timeline by the `hideReplies`
+prop on `<MessageList>` so the parent's "reply count" badge is the
+only sign that a thread exists.
 
 ![Figure 17: Thread side panel on `#ship-it`. Parent on top, replies below, composer pre-bound to the parent.](../session-logs/screenshots/21_thread_panel.png)
 
